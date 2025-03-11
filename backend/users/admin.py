@@ -25,6 +25,12 @@ class SubsrciptionsInline(admin.TabularInline):
     fk_name = 'subscribed_to'
 
 class CustomUserAdmin(UserAdmin):
+    fieldsets = (
+        (None, {'fields': ('username', 'email', 'password')}),
+        ('Персональные данные', {'fields': ('first_name', 'last_name', 'avatar')}),
+        ('Разрешения', {'fields': ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions')}),
+        ('Важные даты', {'fields': ('last_login', 'date_joined')}),
+    )
     search_fields = (
         'email',
         'username',
@@ -36,6 +42,7 @@ class CustomUserAdmin(UserAdmin):
         'first_name',
         'last_name',
         'is_staff',
+        'avatar'
     )
     ordering = (
         'id',
@@ -47,3 +54,4 @@ class CustomUserAdmin(UserAdmin):
                )
 
 admin.site.register(User, CustomUserAdmin)
+admin.site.register(Subsrciption)

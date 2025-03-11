@@ -7,7 +7,6 @@ from django_filters.rest_framework import (DjangoFilterBackend,
                                            FilterSet,
                                            CharFilter)
 from django_filters import rest_framework as filters
-
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -17,12 +16,15 @@ from .models import Ingredient, Recipe, Tag
 from cart.models import Cart, Favorite
 from .serializers import (RecipeFullSerializer,
                           TagSerializer,
-                          IngredientSerializer)
-from .permissions import IsOwnerOrReadOnly
+                          IngredientSerializer,
+                          RecipeBriefSerializer)
+from .permissions import IsOwnerOrReadOnly, IsAdmin
+from pagination import CustomPageNumberPagination
 
 class RecipeFilter(FilterSet):
     author_first_name = filters.CharFilter(field_name='author__first_name', lookup_expr='icontains')
-    is_favorite = filters.BooleanFilter(method='filter_is_favorite')
+    author = filters.NumberFilter(field_name='author__id')
+    is_favorited = filters.BooleanFilter(method='filter_is_favorited')
     is_in_shopping_cart = filters.BooleanFilter(method='filter_is_in_shopping_cart')
     tags = filters.ModelMultipleChoiceFilter(
         field_name='tags__slug',
@@ -32,19 +34,24 @@ class RecipeFilter(FilterSet):
     class Meta:
         model = Recipe
         fields = (
-            'author__first_name',
-            'is_favorite',
+            'author',
+            'author_first_name',
+            'is_favorited',
             'is_in_shopping_cart',
             'tags',
         )
-    def filter_is_favorite(self, queryset, name, value):
+    def filter_is_favorited(self, queryset, name, value):
         user = self.request.user
+        if not user.is_authenticated:
+            return queryset.all()
         if value:
             return queryset.filter(favorites__user=user)
         return queryset.exclude(favorites__user=user)
     
     def filter_is_in_shopping_cart(self, queryset, name, value):
         user = self.request.user
+        if not user.is_authenticated:
+            return queryset.all()
         if value:
             return queryset.filter(carts__user=user)
         return queryset.exclude(carts__user=user)
@@ -57,10 +64,10 @@ def get_ingredients_from_cart(user):
     recipes_in_cart = cart.recipes.all()
     ingredients_dict = defaultdict(lambda: {'amount': 0, 'unit': ''})
     for recipe in recipes_in_cart:
-        for recipe_ingredient in recipe.recipe_ingredients.all():
+        for recipe_ingredient in recipe.ingredients.all():
             ingredient = recipe_ingredient.ingredient
-            ingredients_dict[ingredient.title]['amount'] += recipe_ingredient.amount
-            ingredients_dict[ingredient.title]['unit'] = ingredient.unit
+            ingredients_dict[ingredient.name]['amount'] += recipe_ingredient.amount
+            ingredients_dict[ingredient.name]['measurement_unit'] = ingredient.measurement_unit
     return ingredients_dict
 
 
@@ -69,13 +76,20 @@ class RecipeView(viewsets.ModelViewSet):
     queryset = Recipe.objects.all()
     filter_backends = (DjangoFilterBackend,)
     filterset_class = RecipeFilter
+    pagination_class = CustomPageNumberPagination
 
     def get_permissions(self):
-        if self.action in ('list', 'retrieve',):
+        if self.action in ('list', 'retrieve', 'recipe_by_link'):
             return (AllowAny(),)
         elif self.action in ('update', 'partial_update', 'destroy',):
             return (IsOwnerOrReadOnly(),)
         return (IsAuthenticated(),)
+    
+    def get_serializer_class(self):
+        if self.action == 'favorite':
+            return RecipeBriefSerializer
+        return super().get_serializer_class()
+
 
     @action(detail=True, methods=['post', 'delete'], url_path='shopping_cart')
     def manage_cart(self, request, pk=None):
@@ -90,15 +104,21 @@ class RecipeView(viewsets.ModelViewSet):
                     status=status.HTTP_400_BAD_REQUEST
                 )
             cart.recipes.add(recipe)
+            serializer = RecipeBriefSerializer(
+                recipe,
+                many=False,
+                context={
+                    'request': request
+                })
             return Response(
-                {'detail': 'Рецепт добавлен в корзину.'},
+                serializer.data,
                 status=status.HTTP_201_CREATED
             )
         elif request.method == 'DELETE':
             if recipe not in recipes_in_cart:
                 return Response(
                     {'detail': 'Такого рецепта не было в корзине.'},
-                    status=status.HTTP_404_NOT_FOUND
+                    status=status.HTTP_400_BAD_REQUEST
                 )
             cart.recipes.remove(recipe)
             return Response(
@@ -111,16 +131,16 @@ class RecipeView(viewsets.ModelViewSet):
         ingredients = get_ingredients_from_cart(request.user)
         output = StringIO()
         for name, data in ingredients.items():
-            output.write(f"{name} ({data['unit']}) ― {int(data['amount'])}\n")
+            output.write(f"{name} ({data['measurement_unit']}) ― {int(data['amount'])}\n")
         response = HttpResponse(
             output.getvalue(),
             content_type='text/plain'
         )
         response['Content-Disposition'] = 'attachment; filename="shopping_list.txt"'
         return response
-    
+
     @action(detail=True, methods=['post', 'delete'], url_path='favorite')
-    def manage_favotite(self, request, pk=None):
+    def favorite(self, request, pk=None):
         recipe = get_object_or_404(Recipe, pk=pk)
         user = request.user
         if request.method == 'POST':
@@ -146,14 +166,13 @@ class RecipeView(viewsets.ModelViewSet):
                 {'detail': 'Рецепт удалён из избранного.'},
                 status=status.HTTP_204_NO_CONTENT
             )
-    @action(detail=True, methods=['get'], url_path='get-link', permission_classes=[AllowAny])
 
+    @action(detail=True, methods=['get'], url_path='get-link')
     def recipe_by_link(self, request, pk=None):
         short_link = get_object_or_404(Recipe, id=pk).generate_short_url()
         return Response(
             {"short-link": short_link}
         )
-        
 
 
 @api_view(['GET'])
@@ -167,17 +186,18 @@ class TagView(viewsets.ModelViewSet):
     queryset = Tag.objects.all()
     permission_classes = [AllowAny]
     pagination_class = None
+    http_method_names = ['get', 'head', 'options']
 
-    
 
 class IngredientFilter(FilterSet):
-    name = CharFilter(field_name='name', lookup_expr='istartswith')
+    name = CharFilter(field_name='name', lookup_expr='icontains')
 
     class Meta:
         model = Ingredient
         fields = (
             'name',
         )
+
 
 class IngredientView(viewsets.ModelViewSet):
     serializer_class = IngredientSerializer
@@ -186,3 +206,4 @@ class IngredientView(viewsets.ModelViewSet):
     filterset_class = IngredientFilter
     permission_classes = [AllowAny]
     pagination_class = None
+    http_method_names = ['get', 'head', 'options']

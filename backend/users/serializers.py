@@ -5,7 +5,7 @@ from cart.models import Subsrciption
 from recipes.models import Recipe
 from django.core.validators import RegexValidator
 from rest_framework.validators import UniqueValidator
-
+from django.contrib.auth.hashers import make_password
 
 
 
@@ -18,7 +18,7 @@ class UserListSerializer(serializers.ModelSerializer):
         if not request or not request.user.is_authenticated:
             return False
         return Subsrciption.objects.filter(
-            subscriber=obj, subscribed_to=request.user).exists()
+            subscriber=request.user, subscribed_to=obj).exists()
 
     class Meta:
         model = User
@@ -98,6 +98,7 @@ class UserCreateSerializer(serializers.ModelSerializer):
     
     )
 
+
     class Meta:
         model = User
         fields = (
@@ -108,6 +109,9 @@ class UserCreateSerializer(serializers.ModelSerializer):
             'last_name',
             'password',
         )
+    def create(self, validated_data):
+        validated_data['password'] = make_password(validated_data['password'])
+        return super().create(validated_data)
 
 class CustomTokenCreateSerializer(TokenCreateSerializer):
     email = serializers.EmailField(required=True)
@@ -121,22 +125,29 @@ class UserWithRecipesSerializer(serializers.ModelSerializer):
     recipes = serializers.SerializerMethodField()
     is_subscribed = serializers.SerializerMethodField()
     avatar = serializers.ImageField(required=False)
-
-    def get_is_subscribed(self, obj):
-        request = self.context.get('request')
-        if request and request.user.is_authenticated:
-            return Subsrciption.objects.filter(
-                subscriber=obj, subscribed_to=request.user).exists()
-        else:
-            False
+    recipes_count = serializers.SerializerMethodField()
 
     def get_recipes(self, obj):
-        from recipes.serializers import RecipeBriefSerializer
+        recipes_limit = self.context.get('recipes_limit')
         recipes = Recipe.objects.filter(author=obj)
+        if recipes_limit:
+            try:
+                recipes_limit = int(recipes_limit)
+                recipes = recipes[:recipes_limit]
+            except ValueError:
+                make_password
+        from recipes.serializers import RecipeBriefSerializer
         return RecipeBriefSerializer(recipes, many=True).data
 
-    def get_recipe_count(self, obj):
+    def get_recipes_count(self, obj):
         return Recipe.objects.filter(author=obj).count()
+    
+    def get_is_subscribed(self, obj):
+        request = self.context.get('request')
+        if not request or not request.user.is_authenticated:
+            return False
+        return Subsrciption.objects.filter(
+            subscriber=request.user, subscribed_to=obj).exists()
     
     class Meta:
         model = User
@@ -148,6 +159,6 @@ class UserWithRecipesSerializer(serializers.ModelSerializer):
             'last_name',
             'is_subscribed',
             'recipes',
-            'recipe_count',
+            'recipes_count',
             'avatar',
         )

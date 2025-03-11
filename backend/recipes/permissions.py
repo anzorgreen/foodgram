@@ -11,3 +11,9 @@ class IsStaffOrReadOnly(BasePermission):
         if request.method in ('GET', 'HEAD', 'OPTIONS',):
             return True
         return request.user.is_staff
+
+class IsAdmin(BasePermission):
+    message = "Это действие доступно только администраторам."
+
+    def has_permission(self, request, view):
+        return request.user and request.user.is_staff

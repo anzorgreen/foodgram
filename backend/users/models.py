@@ -30,7 +30,8 @@ class User(AbstractUser):
         upload_to='users/images/'
     )
     email = models.EmailField(unique=True)
-    REQUIRED_FIELDS = []
+    username = models.CharField(max_length=150, unique=True)
+    REQUIRED_FIELDS = ['username']
     USERNAME_FIELD = 'email'
     class Meta:
         verbose_name = 'Пользователь'

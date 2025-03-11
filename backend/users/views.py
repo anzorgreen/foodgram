@@ -8,14 +8,18 @@ from .permissions import IsOwnerOrReadOnly, CustomIsAuthenticated, AllowAny
 from .serializers import (
     UserCreateSerializer, UserListSerializer, UserWithRecipesSerializer
 )
+from constants import ITEMS_ON_PAGE
+from rest_framework.pagination import PageNumberPagination
 from .models import User
+from pagination import CustomPageNumberPagination
 
 class UserView(viewsets.ModelViewSet):
     queryset = User.objects.all()
     serializer_class = UserListSerializer
+    pagination_class = CustomPageNumberPagination
 
     def get_permissions(self):
-        if self.action in ['list', 'retrieve']:
+        if self.action in ['list', 'retrieve', 'create']:
             return (AllowAny(),)
         elif self.action in ['update', 'partial_update', 'destroy', 'manage_avatar', 'set_password']:
             return (IsOwnerOrReadOnly(),)
@@ -28,7 +32,7 @@ class UserView(viewsets.ModelViewSet):
             return UserListSerializer
         elif self.action == 'create':
             return UserCreateSerializer
-        elif self.action == 'get_subscribers':
+        elif self.action in ['get_subscribers', 'subscribe']:
             return UserWithRecipesSerializer
         return super().get_serializer_class()
 
@@ -58,8 +62,7 @@ class UserView(viewsets.ModelViewSet):
                 avatar_url = request.build_absolute_uri(user.avatar.url)
                 return Response(
                     {
-                        "detail": "Аватар успешно загружен.",
-                        "avatar_url": avatar_url
+                        "avatar": avatar_url
                     },
                     status=status.HTTP_200_OK
                 )
@@ -101,15 +104,23 @@ class UserView(viewsets.ModelViewSet):
     def get_subscribers(self, request):
         user = request.user
         subscribers = user.subscribers.all()
+        subscriber_users = [subscriber.subscriber for subscriber in subscribers]
+
+        paginator = self.pagination_class()
+        paginated_subscribers = paginator.paginate_queryset(subscriber_users, request)
+        recipes_limit = request.query_params.get('recipes_limit')
         serializer = self.get_serializer(
-            [subscriber.subscriber for subscriber in subscribers], many=True)
-        return Response(
-            serializer.data,
-            status=status.HTTP_200_OK
-        )
+            paginated_subscribers,
+            many=True,
+            context={
+                'request': request,
+                'recipes_limit': recipes_limit
+            })
+        return paginator.get_paginated_response(serializer.data)
+        # paginator.page_size = self.pagination_class.page_size if self.pagination_class else ITEMS_ON_PAGE
             
     @action(detail=True, methods=['post', 'delete'], url_path='subscribe')
-    def subscriber(self, request, pk=None):
+    def subscribe(self, request, pk=None):
         user = request.user
         subscribe_to = get_object_or_404(User, id=pk)
         from cart.models import Subsrciption
@@ -118,15 +129,30 @@ class UserView(viewsets.ModelViewSet):
                 subscriber=user, subscribed_to=subscribe_to
                 ).exists():
                 return Response(
-                    {"datail": "Вы уже подписанный на этого пользователя"},
+                    {"detail": "Вы уже подписанный на этого пользователя"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            elif user == subscribe_to:
+                return Response(
+                    {"detail": "Вы не можете подписаться на сомого себя"},
                     status=status.HTTP_400_BAD_REQUEST
                 )
             Subsrciption.objects.create(
                 subscriber=user,
                 subscribed_to=subscribe_to)
-            serializer = UserListSerializer(subscribe_to, many=False)
+            recipes_limit = request.query_params.get('recipes_limit')
+            serializer = UserWithRecipesSerializer(
+                subscribe_to,
+                many=False,
+                context={
+                    'request': request,
+                    'recipes_limit': recipes_limit
+                }
+            )
+            response_data = serializer.data
+            response_data['is_subscribed'] = True
             return Response(
-                serializer.data,
+                response_data,
                 status=status.HTTP_201_CREATED
             )
         elif request.method == "DELETE":
@@ -134,7 +160,7 @@ class UserView(viewsets.ModelViewSet):
                 subscriber=user, subscribed_to=subscribe_to
                 ).exists():
                 return Response(
-                    {"datail": "Вы не подписанны на этого пользователя"},
+                    {"detail": "Вы не подписанны на этого пользователя"},
                     status=status.HTTP_400_BAD_REQUEST
                 )
             Subsrciption.objects.filter(
@@ -143,3 +169,4 @@ class UserView(viewsets.ModelViewSet):
             return Response(
                 status=status.HTTP_204_NO_CONTENT
             )
+    

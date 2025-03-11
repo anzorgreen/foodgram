@@ -1,5 +1,6 @@
 from django.db import models
 from users.models import BaseModel
+from django.core.exceptions import ValidationError
 
 
 class Cart(models.Model):
@@ -51,9 +52,16 @@ class Subsrciption(BaseModel):
     def __str__(self):
         return f'{self.subscriber} подписан на {self.subscribed_to}'
 
+    def clean(self):
+        if self.subscriber == self.subscribed_to:
+            raise ValidationError("Вы не можете подписываться на самого себя.")
+
+    def save(self, *args, **kwargs):
+        self.full_clean()  
+        super().save(*args, **kwargs)
 
 class Favorite(BaseModel):
-    
+
     recipe = models.ForeignKey(
         'recipes.Recipe',
         null=True,

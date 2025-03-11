@@ -33,6 +33,7 @@ class RecipeAdmin(admin.ModelAdmin):
 class TagAdmin(admin.ModelAdmin):
     list_display = (
         'name',
+        'id',
         'slug',
         'created_at',
         'updated_at',
