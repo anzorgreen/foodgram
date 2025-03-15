@@ -1,19 +1,26 @@
 from django.contrib import admin
 
-from .models import Ingredient, Recipe, Tag, RecipeIngredient
+from .models import Ingredient, Recipe, RecipeIngredient, Tag
 
 
 class RecipeIngredientInline(admin.TabularInline):
+    """Inline-добавление ингредиентов в рецепт."""
+
     model = RecipeIngredient
     extra = 1
-    fields = ['ingredient', 'amount']
+    fields = (
+        'ingredient',
+        'amount',
+    )
 
 
 class RecipeAdmin(admin.ModelAdmin):
+    """Отображение рецептов в админке."""
+
     search_fields = (
         'name',
         'author__first_name',
-        'author__last_name'
+        'author__last_name',
     )
     list_filter = (
         'tags',
@@ -30,7 +37,10 @@ class RecipeAdmin(admin.ModelAdmin):
         RecipeIngredientInline,
     )
 
+
 class TagAdmin(admin.ModelAdmin):
+    """Отображение тегов в админке."""
+
     list_display = (
         'name',
         'id',
@@ -39,7 +49,10 @@ class TagAdmin(admin.ModelAdmin):
         'updated_at',
     )
 
+
 class IngredientAdmin(admin.ModelAdmin):
+    """Отображение ингредиентов в админке."""
+
     search_fields = (
         'name',
     )
@@ -49,8 +62,6 @@ class IngredientAdmin(admin.ModelAdmin):
     )
 
 
-
 admin.site.register(Recipe, RecipeAdmin)
 admin.site.register(Ingredient, IngredientAdmin)
 admin.site.register(Tag, TagAdmin)
-

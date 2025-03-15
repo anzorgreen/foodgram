@@ -1,13 +1,10 @@
 from django.contrib import admin
-from django.conf.urls.static import static
-from django.conf import settings
 from django.urls import path, include
 from rest_framework import routers
 
-from recipes.views import (RecipeView,
-                           TagView, IngredientView,
-                           recipe_by_short_url
-                           )
+from recipes.views import (
+    RecipeView, TagView, IngredientView, recipe_by_short_url
+)
 from users.models import CustomObtainAuthToken
 from users.views import UserView
 
@@ -33,9 +30,3 @@ urlpatterns = [
         name='recipe-short-url'
     ),
 ]
-
-if settings.DEBUG:
-    urlpatterns += static(
-        settings.MEDIA_URL,
-        document_root=settings.MEDIA_ROOT
-    )

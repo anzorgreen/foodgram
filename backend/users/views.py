@@ -1,48 +1,58 @@
 import base64
+
 from django.shortcuts import get_object_or_404
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError
 from django.core.files.base import ContentFile
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from .permissions import IsOwnerOrReadOnly, CustomIsAuthenticated, AllowAny
+from rest_framework.permissions import AllowAny
+from .models import User, Subscription
+from utils.pagination import CustomPageNumberPagination
+from .permissions import IsOwnerOrReadOnly, CustomIsAuthenticated
 from .serializers import (
     UserCreateSerializer, UserListSerializer, UserWithRecipesSerializer
 )
-from constants import ITEMS_ON_PAGE
-from rest_framework.pagination import PageNumberPagination
-from .models import User
-from pagination import CustomPageNumberPagination
+
 
 class UserView(viewsets.ModelViewSet):
+    """Представление для работы с пользователями."""
+
     queryset = User.objects.all()
     serializer_class = UserListSerializer
     pagination_class = CustomPageNumberPagination
 
     def get_permissions(self):
-        if self.action in ['list', 'retrieve', 'create']:
+        if self.action in ('list', 'retrieve', 'create'):
             return (AllowAny(),)
-        elif self.action in ['update', 'partial_update', 'destroy', 'manage_avatar', 'set_password']:
+        elif self.action in (
+            'update', 'partial_update', 'destroy', 'manage_avatar',
+            'set_password'
+        ):
             return (IsOwnerOrReadOnly(),)
         elif self.action == 'get_me':
             return (CustomIsAuthenticated(),)
         return (CustomIsAuthenticated(),)
-    
+
     def get_serializer_class(self):
-        if self.action in ['list', 'retrieve']:
+        if self.action in ('list', 'retrieve'):
             return UserListSerializer
         elif self.action == 'create':
             return UserCreateSerializer
-        elif self.action in ['get_subscribers', 'subscribe']:
+        elif self.action in ('get_subscriptions', 'subscribe'):
             return UserWithRecipesSerializer
         return super().get_serializer_class()
 
     @action(detail=False, methods=['get'], url_path='me')
     def get_me(self, request, pk=None):
+        """Получить данные текущего пользователя."""
         serializer = self.get_serializer(request.user)
         return Response(serializer.data)
 
     @action(detail=False, methods=['put', 'delete'], url_path='me/avatar')
     def manage_avatar(self, request, pk=None):
+        """Управление аватаром пользователя."""
         if request.method == 'PUT':
             user = request.user
             avatar_data = request.data.get('avatar')
@@ -83,8 +93,10 @@ class UserView(viewsets.ModelViewSet):
                 {"detail": "Аватар успешно удален."},
                 status=status.HTTP_204_NO_CONTENT
             )
+
     @action(detail=False, methods=['post',], url_path='set_password')
     def set_password(self, request, pk=None):
+        """Изменить пароль пользователя."""
         new_password = request.data.get('new_password')
         current_password = request.data.get('current_password')
         user = request.user
@@ -93,21 +105,34 @@ class UserView(viewsets.ModelViewSet):
                 {"detail": "Неверный текущий пароль."},
                 status=status.HTTP_400_BAD_REQUEST
             )
+        try:
+            validate_password(new_password, user=user)
+        except ValidationError as e:
+            return Response(
+                {"detail": "Недопустимый пароль.", "errors": list(e.messages)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
         user.set_password(new_password)
         user.save()
         return Response(
             {"detail": "Пароль успешно изменён."},
             status=status.HTTP_204_NO_CONTENT
         )
-    
+
     @action(detail=False, methods=['get'], url_path='subscriptions')
-    def get_subscribers(self, request):
+    def get_subscriptions(self, request):
+        """Получить подписчиков пользователя."""
         user = request.user
-        subscribers = user.subscribers.all()
-        subscriber_users = [subscriber.subscriber for subscriber in subscribers]
+        subscriptions = user.subscriptions.all()
+        subscribed_users = [
+            subscription.subscribed_to for subscription in subscriptions
+        ]
 
         paginator = self.pagination_class()
-        paginated_subscribers = paginator.paginate_queryset(subscriber_users, request)
+        paginated_subscribers = paginator.paginate_queryset(
+            subscribed_users, request
+        )
         recipes_limit = request.query_params.get('recipes_limit')
         serializer = self.get_serializer(
             paginated_subscribers,
@@ -115,29 +140,29 @@ class UserView(viewsets.ModelViewSet):
             context={
                 'request': request,
                 'recipes_limit': recipes_limit
-            })
+            }
+        )
         return paginator.get_paginated_response(serializer.data)
-        # paginator.page_size = self.pagination_class.page_size if self.pagination_class else ITEMS_ON_PAGE
-            
-    @action(detail=True, methods=['post', 'delete'], url_path='subscribe')
+
+    @action(detail=True, methods=('post', 'delete'), url_path='subscribe')
     def subscribe(self, request, pk=None):
+        """Подписаться на пользователя или отменить подписку."""
         user = request.user
         subscribe_to = get_object_or_404(User, id=pk)
-        from cart.models import Subsrciption
         if request.method == "POST":
-            if Subsrciption.objects.filter(
+            if Subscription.objects.filter(
                 subscriber=user, subscribed_to=subscribe_to
-                ).exists():
+            ).exists():
                 return Response(
-                    {"detail": "Вы уже подписанный на этого пользователя"},
+                    {"detail": "Вы уже подписаны на этого пользователя"},
                     status=status.HTTP_400_BAD_REQUEST
                 )
             elif user == subscribe_to:
                 return Response(
-                    {"detail": "Вы не можете подписаться на сомого себя"},
+                    {"detail": "Вы не можете подписаться на самого себя"},
                     status=status.HTTP_400_BAD_REQUEST
                 )
-            Subsrciption.objects.create(
+            Subscription.objects.create(
                 subscriber=user,
                 subscribed_to=subscribe_to)
             recipes_limit = request.query_params.get('recipes_limit')
@@ -156,17 +181,16 @@ class UserView(viewsets.ModelViewSet):
                 status=status.HTTP_201_CREATED
             )
         elif request.method == "DELETE":
-            if not Subsrciption.objects.filter(
+            if not Subscription.objects.filter(
                 subscriber=user, subscribed_to=subscribe_to
-                ).exists():
+            ).exists():
                 return Response(
-                    {"detail": "Вы не подписанны на этого пользователя"},
+                    {"detail": "Вы не подписаны на этого пользователя"},
                     status=status.HTTP_400_BAD_REQUEST
                 )
-            Subsrciption.objects.filter(
+            Subscription.objects.filter(
                 subscriber=user, subscribed_to=subscribe_to
                 ).delete()
             return Response(
                 status=status.HTTP_204_NO_CONTENT
             )
-    

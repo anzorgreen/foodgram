@@ -18,7 +18,7 @@ services:
 
   backend:
     container_name: foodgram-back
-    build: ../backend/
+    image: anzorgreen/foodgram_backend:v1
     env_file: ../.env
     depends_on:
       - db
@@ -29,7 +29,7 @@ services:
 
   frontend:
     container_name: foodgram-front
-    build: ../frontend
+    image: anzorgreen/foodgram_frontend:v1
     volumes:
       - ../frontend/:/app/build/
     depends_on:
@@ -46,5 +46,3 @@ services:
       - ../docs/:/usr/share/nginx/html/api/docs/
       - static:/staticfiles/
       - media:/var/www/foodgram/media/
-
-

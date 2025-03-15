@@ -1,77 +1,30 @@
-from collections import defaultdict
+
 from io import StringIO
 
 from django.shortcuts import get_object_or_404
 from django.http import HttpResponse
-from django_filters.rest_framework import (DjangoFilterBackend,
-                                           FilterSet,
-                                           CharFilter)
-from django_filters import rest_framework as filters
+from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import viewsets, status
-from rest_framework.decorators import action
+from rest_framework.decorators import action, api_view
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated
-from rest_framework.decorators import api_view
+
+from cart.models import Cart
+from .filters import RecipeFilter, IngredientFilter
 from .models import Ingredient, Recipe, Tag
-from cart.models import Cart, Favorite
+from utils.pagination import CustomPageNumberPagination
+from .permissions import IsOwnerOrReadOnly
 from .serializers import (RecipeFullSerializer,
                           TagSerializer,
                           IngredientSerializer,
                           RecipeBriefSerializer)
-from .permissions import IsOwnerOrReadOnly, IsAdmin
-from pagination import CustomPageNumberPagination
-
-class RecipeFilter(FilterSet):
-    author_first_name = filters.CharFilter(field_name='author__first_name', lookup_expr='icontains')
-    author = filters.NumberFilter(field_name='author__id')
-    is_favorited = filters.BooleanFilter(method='filter_is_favorited')
-    is_in_shopping_cart = filters.BooleanFilter(method='filter_is_in_shopping_cart')
-    tags = filters.ModelMultipleChoiceFilter(
-        field_name='tags__slug',
-        queryset=Tag.objects.all(),
-        to_field_name='slug',
-    )
-    class Meta:
-        model = Recipe
-        fields = (
-            'author',
-            'author_first_name',
-            'is_favorited',
-            'is_in_shopping_cart',
-            'tags',
-        )
-    def filter_is_favorited(self, queryset, name, value):
-        user = self.request.user
-        if not user.is_authenticated:
-            return queryset.all()
-        if value:
-            return queryset.filter(favorites__user=user)
-        return queryset.exclude(favorites__user=user)
-    
-    def filter_is_in_shopping_cart(self, queryset, name, value):
-        user = self.request.user
-        if not user.is_authenticated:
-            return queryset.all()
-        if value:
-            return queryset.filter(carts__user=user)
-        return queryset.exclude(carts__user=user)
-
-def get_ingredients_from_cart(user):
-    try:
-        cart = Cart.objects.get(user=user)
-    except Cart.DoesNotExist:
-        return []
-    recipes_in_cart = cart.recipes.all()
-    ingredients_dict = defaultdict(lambda: {'amount': 0, 'unit': ''})
-    for recipe in recipes_in_cart:
-        for recipe_ingredient in recipe.ingredients.all():
-            ingredient = recipe_ingredient.ingredient
-            ingredients_dict[ingredient.name]['amount'] += recipe_ingredient.amount
-            ingredients_dict[ingredient.name]['measurement_unit'] = ingredient.measurement_unit
-    return ingredients_dict
+from users.models import Favorite
+from .utils import get_ingredients_from_cart
 
 
 class RecipeView(viewsets.ModelViewSet):
+    """Представление для рецептов."""
+
     serializer_class = RecipeFullSerializer
     queryset = Recipe.objects.all()
     filter_backends = (DjangoFilterBackend,)
@@ -79,20 +32,22 @@ class RecipeView(viewsets.ModelViewSet):
     pagination_class = CustomPageNumberPagination
 
     def get_permissions(self):
+        """Возвращает права доступа в зависимости от действия."""
         if self.action in ('list', 'retrieve', 'recipe_by_link'):
             return (AllowAny(),)
         elif self.action in ('update', 'partial_update', 'destroy',):
             return (IsOwnerOrReadOnly(),)
         return (IsAuthenticated(),)
-    
+
     def get_serializer_class(self):
+        """Возвращает сериализатор в зависимости от действия."""
         if self.action == 'favorite':
             return RecipeBriefSerializer
         return super().get_serializer_class()
 
-
     @action(detail=True, methods=['post', 'delete'], url_path='shopping_cart')
     def manage_cart(self, request, pk=None):
+        """Добавляет или удаляет рецепт из корзины пользователя."""
         recipe = self.get_object()
         user = request.user
         cart, created = Cart.objects.get_or_create(user=user)
@@ -107,9 +62,8 @@ class RecipeView(viewsets.ModelViewSet):
             serializer = RecipeBriefSerializer(
                 recipe,
                 many=False,
-                context={
-                    'request': request
-                })
+                context={'request': request}
+            )
             return Response(
                 serializer.data,
                 status=status.HTTP_201_CREATED
@@ -128,19 +82,26 @@ class RecipeView(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['get'], url_path='download_shopping_cart')
     def download_shopping_cart(self, request):
+        """Скачать список ингредиентов из корзины."""
         ingredients = get_ingredients_from_cart(request.user)
         output = StringIO()
         for name, data in ingredients.items():
-            output.write(f"{name} ({data['measurement_unit']}) ― {int(data['amount'])}\n")
+            output.write(
+                f'{name} ({data["measurement_unit"]})'
+                f' ― {int(data["amount"])}\n'
+            )
         response = HttpResponse(
             output.getvalue(),
             content_type='text/plain'
         )
-        response['Content-Disposition'] = 'attachment; filename="shopping_list.txt"'
+        response['Content-Disposition'] = (
+            'attachment; filename="shopping_list.txt"'
+        )
         return response
 
     @action(detail=True, methods=['post', 'delete'], url_path='favorite')
     def favorite(self, request, pk=None):
+        """Добавляет или удаляет рецепт из избранного пользователя."""
         recipe = get_object_or_404(Recipe, pk=pk)
         user = request.user
         if request.method == 'POST':
@@ -169,6 +130,7 @@ class RecipeView(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['get'], url_path='get-link')
     def recipe_by_link(self, request, pk=None):
+        """Генерирует короткую ссылку на рецепт."""
         short_link = get_object_or_404(Recipe, id=pk).generate_short_url()
         return Response(
             {"short-link": short_link}
@@ -177,11 +139,15 @@ class RecipeView(viewsets.ModelViewSet):
 
 @api_view(['GET'])
 def recipe_by_short_url(request, short_url):
+    """Получает рецепт по короткой ссылке."""
     recipe = get_object_or_404(Recipe, short_url=short_url)
     serializer = RecipeFullSerializer(recipe, context={'request': request})
     return Response(serializer.data)
 
+
 class TagView(viewsets.ModelViewSet):
+    """Представление для тегов."""
+
     serializer_class = TagSerializer
     queryset = Tag.objects.all()
     permission_classes = [AllowAny]
@@ -189,21 +155,13 @@ class TagView(viewsets.ModelViewSet):
     http_method_names = ['get', 'head', 'options']
 
 
-class IngredientFilter(FilterSet):
-    name = CharFilter(field_name='name', lookup_expr='icontains')
-
-    class Meta:
-        model = Ingredient
-        fields = (
-            'name',
-        )
-
-
 class IngredientView(viewsets.ModelViewSet):
+    """Представление для ингредиентов."""
+
     serializer_class = IngredientSerializer
     queryset = Ingredient.objects.all()
-    filter_backends = [DjangoFilterBackend]
+    filter_backends = (DjangoFilterBackend,)
     filterset_class = IngredientFilter
-    permission_classes = [AllowAny]
+    permission_classes = (AllowAny,)
     pagination_class = None
-    http_method_names = ['get', 'head', 'options']
+    http_method_names = ('get', 'head', 'options')
