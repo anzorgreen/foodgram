@@ -1,19 +1,19 @@
 import base64
 
-from django.shortcuts import get_object_or_404
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 from django.core.files.base import ContentFile
-from rest_framework import viewsets, status
+from django.shortcuts import get_object_or_404
+from rest_framework import status, viewsets
 from rest_framework.decorators import action
-from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
-from .models import User, Subscription
+from rest_framework.response import Response
 from utils.pagination import CustomPageNumberPagination
-from .permissions import IsOwnerOrReadOnly, CustomIsAuthenticated
-from .serializers import (
-    UserCreateSerializer, UserListSerializer, UserWithRecipesSerializer
-)
+
+from .models import Subscription, User
+from .permissions import CustomIsAuthenticated, IsOwnerOrReadOnly
+from .serializers import (UserCreateSerializer, UserListSerializer,
+                          UserWithRecipesSerializer)
 
 
 class UserView(viewsets.ModelViewSet):
@@ -190,7 +190,7 @@ class UserView(viewsets.ModelViewSet):
                 )
             Subscription.objects.filter(
                 subscriber=user, subscribed_to=subscribe_to
-                ).delete()
+            ).delete()
             return Response(
                 status=status.HTTP_204_NO_CONTENT
             )

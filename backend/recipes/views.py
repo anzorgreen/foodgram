@@ -1,24 +1,22 @@
 
 from io import StringIO
 
-from django.shortcuts import get_object_or_404
-from django.http import HttpResponse
-from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework import viewsets, status
-from rest_framework.decorators import action, api_view
-from rest_framework.response import Response
-from rest_framework.permissions import AllowAny, IsAuthenticated
-
 from cart.models import Cart
-from .filters import RecipeFilter, IngredientFilter
-from .models import Ingredient, Recipe, Tag
-from utils.pagination import CustomPageNumberPagination
-from .permissions import IsOwnerOrReadOnly
-from .serializers import (RecipeFullSerializer,
-                          TagSerializer,
-                          IngredientSerializer,
-                          RecipeBriefSerializer)
+from django.http import HttpResponse
+from django.shortcuts import get_object_or_404
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework import status, viewsets
+from rest_framework.decorators import action, api_view
+from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.response import Response
 from users.models import Favorite
+from utils.pagination import CustomPageNumberPagination
+
+from .filters import IngredientFilter, RecipeFilter
+from .models import Ingredient, Recipe, Tag
+from .permissions import IsOwnerOrReadOnly
+from .serializers import (IngredientSerializer, RecipeBriefSerializer,
+                          RecipeFullSerializer, TagSerializer)
 from .utils import get_ingredients_from_cart
 
 

@@ -1,12 +1,13 @@
-from rest_framework import serializers
-from djoser.serializers import TokenCreateSerializer
-from .models import User, Subscription
-from recipes.models import Recipe
+from django.contrib.auth.hashers import make_password
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 from django.core.validators import RegexValidator
+from djoser.serializers import TokenCreateSerializer
+from recipes.models import Recipe
+from rest_framework import serializers
 from rest_framework.validators import UniqueValidator
-from django.contrib.auth.hashers import make_password
+
+from .models import Subscription, User
 
 
 class UserListSerializer(serializers.ModelSerializer):

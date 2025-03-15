@@ -1,10 +1,8 @@
 from django.contrib import admin
-from django.urls import path, include
+from django.urls import include, path
+from recipes.views import (IngredientView, RecipeView, TagView,
+                           recipe_by_short_url)
 from rest_framework import routers
-
-from recipes.views import (
-    RecipeView, TagView, IngredientView, recipe_by_short_url
-)
 from users.models import CustomObtainAuthToken
 from users.views import UserView
 

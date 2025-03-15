@@ -1,11 +1,10 @@
 import uuid
 
-from django.db import models
-from django.core.exceptions import ValidationError
 from django.conf import settings
-
-from utils.constants import MAX_LENGTH_TITLE, MAX_LENGTH_SLUG
+from django.core.exceptions import ValidationError
+from django.db import models
 from users.models import BaseModel
+from utils.constants import MAX_LENGTH_SLUG, MAX_LENGTH_TITLE
 
 
 class Recipe(BaseModel):

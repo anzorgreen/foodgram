@@ -1,6 +1,5 @@
-from django_filters.rest_framework import (FilterSet,
-                                           CharFilter)
 from django_filters import rest_framework as filters
+from django_filters.rest_framework import CharFilter, FilterSet
 
 from .models import Ingredient, Recipe, Tag
 
@@ -72,4 +71,3 @@ class RecipeFilter(FilterSet):
         if value:
             return queryset.filter(carts__user=user)
         return queryset.exclude(carts__user=user)
-

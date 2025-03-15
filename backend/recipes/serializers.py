@@ -1,11 +1,13 @@
-from rest_framework import serializers
-from django.core.files.base import ContentFile
 import base64
-from .models import Recipe, Tag, Ingredient, RecipeIngredient
+
 from cart.models import Cart
+from django.core.files.base import ContentFile
+from django.core.validators import MaxLengthValidator, MinValueValidator
+from rest_framework import serializers
 from users.models import Favorite
 from users.serializers import UserListSerializer
-from django.core.validators import MinValueValidator, MaxLengthValidator
+
+from .models import Ingredient, Recipe, RecipeIngredient, Tag
 
 
 class TagSerializer(serializers.ModelSerializer):
@@ -145,7 +147,7 @@ class RecipeFullSerializer(serializers.ModelSerializer):
         for tag in tags:
             representation['tags'].append(
                 {'id': tag.id, 'name': tag.name, 'slug': tag.slug}
-                )
+            )
         return representation
 
     def get_is_favorited(self, obj):

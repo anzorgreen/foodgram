@@ -1,8 +1,8 @@
+from cart.models import Cart
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
-from .models import User
-from cart.models import Cart
-from .models import Favorite, Subscription
+
+from .models import Favorite, Subscription, User
 
 
 class FavouriteInline(admin.TabularInline):

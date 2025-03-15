@@ -1,7 +1,7 @@
 from django.contrib import admin
+from recipes.models import Recipe
 
 from .models import Cart
-from recipes.models import Recipe
 
 
 class RecipeInline(admin.TabularInline):
