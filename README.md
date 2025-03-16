@@ -2,6 +2,7 @@
 Ссылка на проект:
 http://foodgramproject.sytes.net
 Это веб-приложение, где вы можете делиться своими любимыми рецептами, а также находить рецепты других пользователей
+
 [![Main Foodgram workflow](https://github.com/anzorgreen/foodgram/actions/workflows/main.yml/badge.svg)](https://github.com/anzorgreen/foodgram/actions/workflows/main.yml)
 
 ## Установка Docker

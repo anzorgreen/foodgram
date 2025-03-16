@@ -18,7 +18,7 @@ const About = ({ updateOrders, orders }) => {
           <h2 className={styles.subtitle}>Что это за сайт?</h2>
           <div className={styles.text}>
             <p className={styles.textItem}>
-              Представляю вам проект, созданный во время обучения в Яндекс Практикуме. Этот проект — часть учебного курса, но он создан полностью самостоятельно.
+                Меня зовут Анзор Квачантирадзе, и я рад приветствовать вас на своем учебном проекте Foodgram. созданном во время обучения в Яндекс Практикуме. Этот проект — часть учебного курса, но он создан полностью самостоятельно.
             </p>
             <p className={styles.textItem}>
               Цель этого сайта — дать возможность пользователям создавать и хранить рецепты на онлайн-платформе. Кроме того, можно скачать список продуктов, необходимых для
@@ -28,7 +28,7 @@ const About = ({ updateOrders, orders }) => {
               Чтобы использовать все возможности сайта — нужна регистрация. Проверка адреса электронной почты не осуществляется, вы можете ввести любой email. 
             </p>
             <p className={styles.textItem}>
-              Заходите и делитесь своими любимыми рецептами!
+            Я отвечаю за разработку бэкенда этого приложения. В дальнейшем проект не планируется развивать, но если у вас возникнут вопросы, предложения или комментарии, не стесняйтесь обращаться. 
             </p>
           </div>
         </div>
@@ -38,10 +38,13 @@ const About = ({ updateOrders, orders }) => {
           </h2>
           <div className={styles.text}>
             <p className={styles.textItem}>
-              Код проекта находится тут - <a href="#" className={styles.textLink}>Github</a>
+              Код проекта находится тут - <a href="https://github.com/anzorgreen/foodgram.git" className={styles.textLink}>Github</a>
             </p>
             <p className={styles.textItem}>
-              Автор проекта: <a href="#" className={styles.textLink}>Имя Автора</a>
+              Автор проекта: <a href="https://www.instagram.com/anzor_green/" className={styles.textLink}>Анзор Квачантирадзе</a>
+              Email: anzor.green@gmail.com
+              Telegram: @anzor_green
+              Instagram: @anzor_gree
             </p>
           </div>
         </aside>
