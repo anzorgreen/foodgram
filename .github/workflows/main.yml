@@ -105,6 +105,6 @@ jobs:
             sudo docker compose -f docker-compose.production.yml pull
             sudo docker compose -f docker-compose.production.yml down
             sudo docker compose -f docker-compose.production.yml up -d
-            sudo docker compose -f docker-compose.production.yml exec foodgram-back python manage.py migrate
+            sudo docker exec foodgram-back python manage.py migrate
             # sudo docker compose -f docker-compose.production.yml exec foogram-back python manage.py collectstatic
             # sudo docker compose -f docker-compose.production.yml exec foogram-back cp -r /app/collected_static/. /backend_static/static/
