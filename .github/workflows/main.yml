@@ -23,7 +23,7 @@ jobs:
     - name: Test with flake8
       run: python -m flake8 backend/
 
-  build_and_push_to_docker_hub:
+  build_and_push_backend_to_docker_hub:
     name: Push Docker image to DockerHub
     runs-on: ubuntu-latest
     needs: flake8
@@ -43,7 +43,7 @@ jobs:
           context: ./backend/
           push: true
           tags: anzorgreen/foodgram_backend:v1
-  build_frontend_and_push_to_docker_hub:
+  build_and_push_frontend_to_docker_hub:
     name: Push frontend Docker image to DockerHub
     runs-on: ubuntu-latest
     steps:
@@ -66,8 +66,8 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     needs: 
-      - build_and_push_to_docker_hub
-      - build_frontend_and_push_to_docker_hub
+      - build_and_push_backend_to_docker_hub
+      - build_and_push_frontend_to_docker_hub
     steps:
       - name: Checkout repo
         uses: actions/checkout@v3
@@ -106,5 +106,3 @@ jobs:
             sudo docker compose -f docker-compose.production.yml down
             sudo docker compose -f docker-compose.production.yml up -d
             sudo docker exec foodgram-back python manage.py migrate
-            # sudo docker compose -f docker-compose.production.yml exec foogram-back python manage.py collectstatic
-            # sudo docker compose -f docker-compose.production.yml exec foogram-back cp -r /app/collected_static/. /backend_static/static/
