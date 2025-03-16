@@ -71,7 +71,6 @@ jobs:
     steps:
       - name: Checkout repo
         uses: actions/checkout@v3
-      # Копируем docker-compose.production.yml на продакшен-сервер
       - name: List files before SCP
         run: ls -la ./docs/
       - name: Copy docs via scp
@@ -87,7 +86,6 @@ jobs:
           command: "sudo tar -xzf"
       - name: Copy docker-compose.production.yml via ssh
         uses: appleboy/scp-action@master
-      # Передаём параметры для action appleboy/scp-action:
         with:
           host: ${{ secrets.HOST }}
           username: ${{ secrets.USER }}
@@ -102,17 +100,11 @@ jobs:
           username: ${{ secrets.USER }}
           key: ${{ secrets.SSH_KEY }}
           passphrase: ${{ secrets.SSH_PASSPHRASE }}
-          # Параметр script передаёт в action appleboy/ssh-action команды,
-          # которые нужно выполнить на сервере, 
-          # с которым установлено соединение
           script: |
             cd foodgram/infra
-            # Выполняет pull образов с Docker Hub
             sudo docker compose -f docker-compose.production.yml pull
-            # Перезапускает все контейнеры в Docker Compose
             sudo docker compose -f docker-compose.production.yml down
             sudo docker compose -f docker-compose.production.yml up -d
-            # Выполняет миграции и сбор статики
-            sudo docker compose -f docker-compose.production.yml exec foogram-back python manage.py migrate
+            sudo docker compose -f docker-compose.production.yml exec foodgram-back python manage.py migrate
             # sudo docker compose -f docker-compose.production.yml exec foogram-back python manage.py collectstatic
             # sudo docker compose -f docker-compose.production.yml exec foogram-back cp -r /app/collected_static/. /backend_static/static/
