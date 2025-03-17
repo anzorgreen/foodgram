@@ -103,10 +103,10 @@ jobs:
           script: |
             cd foodgram/infra
             sudo docker compose -f docker-compose.production.yml down
-            sudo docker image rmi anzorgreen/foodgram_frontend:v1 
-            sudo docker image rmi anzorgreen/foodgram_frontend:v1 
+            sudo docker rmi anzorgreen/foodgram_frontend:v1 
+            sudo docker rmi anzorgreen/foodgram_backend:v1
             # sudo docker compose -f docker-compose.production.yml pull
-            sudo docker pull anzorgreen/foodgram_frontend:v1
-            sudo docker pull anzorgreen/foodgram_backend:v1
+            # sudo docker pull anzorgreen/foodgram_frontend:v1
+            # sudo docker pull anzorgreen/foodgram_backend:v1
             sudo docker compose -f docker-compose.production.yml up -d
             sudo docker exec foodgram-back python manage.py migrate
