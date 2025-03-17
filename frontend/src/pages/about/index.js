@@ -18,7 +18,7 @@ const About = ({ updateOrders, orders }) => {
           <h2 className={styles.subtitle}>Куда ты попал?</h2>
           <div className={styles.text}>
             <p className={styles.textItem}>
-                Меня зовут Анзор Квачантирадзе, и я рад приветствовать тебя на своем учебном проекте Foodgram. созданном во время обучения в Яндекс Практикуме. Этот проект — часть учебного курса, но он создан полностью самостоятельно.
+                Меня зовут Анзор, и я рад приветствовать тебя на своем учебном проекте Foodgram. созданном во время обучения в Яндекс Практикуме. Этот проект — часть учебного курса, но он создан полностью самостоятельно.
             </p>
             <p className={styles.textItem}>
               Цель этого сайта — дать возможность пользователям создавать и хранить рецепты на онлайн-платформе. Кроме того, можно скачать список продуктов, необходимых для
@@ -41,10 +41,20 @@ const About = ({ updateOrders, orders }) => {
               Код проекта находится <a href="https://github.com/anzorgreen/foodgram.git" className={styles.textLink}>тут</a>
             </p>
             <p className={styles.textItem}>
-              Автор проекта: <a href="https://www.instagram.com/anzor_green/" className={styles.textLink}>Анзор Квачантирадзе</a>
-              Email: anzor.green@gmail.com
-              Telegram: @anzor_green
-              Instagram: @anzor_gree
+              Автор: <a href="https://www.instagram.com/anzor_green/" className={styles.textLink}>Анзор Квачантирадзе</a>
+            </p>
+            <p>
+              <ul className={styles.textItem}>
+                <li className={styles.textItem}>
+                  Email: anzor.green@gmail.com
+                </li>
+                <li className={styles.textItem}>
+                  Telegram: @anzor_green
+                </li>
+                <li className={styles.textItem}>
+                  Instagram: @anzor_green
+                </li>
+              </ul>
             </p>
           </div>
         </aside>
