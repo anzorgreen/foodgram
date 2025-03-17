@@ -29,7 +29,7 @@ services:
     container_name: foodgram-front
     image: anzorgreen/foodgram_frontend:v1
     volumes:
-      - ../frontend/:/app/build/
+      - ../frontend/:/app/result_build/
     depends_on:
       - backend
 
