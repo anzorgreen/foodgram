@@ -94,7 +94,7 @@ class UserView(viewsets.ModelViewSet):
                 status=status.HTTP_204_NO_CONTENT
             )
 
-    @action(detail=False, methods=['post',], url_path='set_password')
+    @action(detail=False, methods=('post', ), url_path='set_password')
     def set_password(self, request, pk=None):
         """Изменить пароль пользователя."""
         new_password = request.data.get('new_password')
