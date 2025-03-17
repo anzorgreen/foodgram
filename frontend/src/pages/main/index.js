@@ -45,7 +45,7 @@ const HomePage = ({ updateOrders }) => {
   return <Main>
     <Container>
       <MetaTags>
-        <title>Рецепты111</title>
+        <title>Рецепты</title>
         <meta name="description" content="Фудграм - Рецепты" />
         <meta property="og:title" content="Рецепты" />
       </MetaTags>
