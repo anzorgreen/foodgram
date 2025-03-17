@@ -49,7 +49,7 @@ const About = ({ updateOrders, orders }) => {
                   Email: anzor.green@gmail.com
                 </li>
                 <li className={styles.textItem}>
-                  Telegram: @anzor_green
+                  Telegram: @anzor_green 
                 </li>
                 <li className={styles.textItem}>
                   Instagram: @anzor_green
