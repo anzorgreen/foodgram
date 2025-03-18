@@ -104,6 +104,5 @@ jobs:
             cd foodgram/infra
             sudo docker compose -f docker-compose.production.yml pull
             sudo docker compose -f docker-compose.production.yml down
-            sudo docker compose -f docker-compose.production.yml up -d
-            sudo docker compose exec -T db wait-for-it db:5432 --timeout=30
+            sudo docker compose -f docker-compose.production.yml up -d --wait
             sudo docker compose exec -T backend python manage.py migrate
