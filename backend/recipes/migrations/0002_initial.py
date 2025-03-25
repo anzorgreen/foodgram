@@ -47,7 +47,7 @@ class Migration(migrations.Migration):
         ),
         migrations.AddConstraint(
             model_name='recipeingredient',
-            constraint=models.CheckConstraint(condition=models.Q(('amount__gte', 1)), name='amount_validation', violation_error_message='Поле "amount" ожидает число большее или равное 1'),
+            constraint=models.CheckConstraint(check=models.Q(('amount__gte', 1)), name='amount_validation', violation_error_message='Поле "amount" ожидает число большее или равное 1'),
         ),
         migrations.AddConstraint(
             model_name='recipe',
@@ -55,6 +55,6 @@ class Migration(migrations.Migration):
         ),
         migrations.AddConstraint(
             model_name='recipe',
-            constraint=models.CheckConstraint(condition=models.Q(('cooking_time__gte', 1)), name='cooking_time_validation', violation_error_message='Поле "cooking_time" ожидает число большее или равное 1'),
+            constraint=models.CheckConstraint(check=models.Q(('cooking_time__gte', 1)), name='cooking_time_validation', violation_error_message='Поле "cooking_time" ожидает число большее или равное 1'),
         ),
     ]
