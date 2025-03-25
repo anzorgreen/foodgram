@@ -1,18 +1,17 @@
 import base64
 
-from django.contrib.auth.password_validation import validate_password
-from django.core.exceptions import ValidationError
 from django.core.files.base import ContentFile
-from django.shortcuts import get_object_or_404
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
-from utils.pagination import CustomPageNumberPagination
 
-from .models import Subscription, User
-from .permissions import CustomIsAuthenticated, IsOwnerOrReadOnly
-from .serializers import (UserCreateSerializer, UserListSerializer,
+from backend.pagination import CustomPageNumberPagination
+from backend.permissions import IsOwnerOrReadOnly, StrictAuthenticated
+
+from .models import User
+from .serializers import (ChangePasswordSerializer, SubscriptionSerializer,
+                          UserCreateSerializer, UserListSerializer,
                           UserWithRecipesSerializer)
 
 
@@ -32,8 +31,8 @@ class UserView(viewsets.ModelViewSet):
         ):
             return (IsOwnerOrReadOnly(),)
         elif self.action == 'get_me':
-            return (CustomIsAuthenticated(),)
-        return (CustomIsAuthenticated(),)
+            return (StrictAuthenticated(),)
+        return (StrictAuthenticated(),)
 
     def get_serializer_class(self):
         if self.action in ('list', 'retrieve'):
@@ -42,6 +41,8 @@ class UserView(viewsets.ModelViewSet):
             return UserCreateSerializer
         elif self.action in ('get_subscriptions', 'subscribe'):
             return UserWithRecipesSerializer
+        elif self.action in ('set_password'):
+            return ChangePasswordSerializer
         return super().get_serializer_class()
 
     @action(detail=False, methods=['get'], url_path='me')
@@ -96,23 +97,13 @@ class UserView(viewsets.ModelViewSet):
 
     @action(detail=False, methods=('post', ), url_path='set_password')
     def set_password(self, request, pk=None):
-        """Изменить пароль пользователя."""
-        new_password = request.data.get('new_password')
-        current_password = request.data.get('current_password')
+        serializer = self.get_serializer(data=request.data)
         user = request.user
-        if not user.check_password(current_password):
+        if not serializer.is_valid():
             return Response(
-                {"detail": "Неверный текущий пароль."},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        try:
-            validate_password(new_password, user=user)
-        except ValidationError as e:
-            return Response(
-                {"detail": "Недопустимый пароль.", "errors": list(e.messages)},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
+                serializer.errors,
+                status=status.HTTP_400_BAD_REQUEST)
+        new_password = serializer.validated_data['new_password']
         user.set_password(new_password)
         user.save()
         return Response(
@@ -125,13 +116,12 @@ class UserView(viewsets.ModelViewSet):
         """Получить подписчиков пользователя."""
         user = request.user
         subscriptions = user.subscriptions.all()
-        subscribed_users = [
+        users_i_follow = [
             subscription.subscribed_to for subscription in subscriptions
         ]
-
         paginator = self.pagination_class()
         paginated_subscribers = paginator.paginate_queryset(
-            subscribed_users, request
+            users_i_follow, request
         )
         recipes_limit = request.query_params.get('recipes_limit')
         serializer = self.get_serializer(
@@ -147,26 +137,17 @@ class UserView(viewsets.ModelViewSet):
     @action(detail=True, methods=('post', 'delete'), url_path='subscribe')
     def subscribe(self, request, pk=None):
         """Подписаться на пользователя или отменить подписку."""
-        user = request.user
-        subscribe_to = get_object_or_404(User, id=pk)
+        serializer = SubscriptionSerializer(
+            data={'subscribed_to': pk},
+            context={'request': request}
+        )
+
         if request.method == "POST":
-            if Subscription.objects.filter(
-                subscriber=user, subscribed_to=subscribe_to
-            ).exists():
-                return Response(
-                    {"detail": "Вы уже подписаны на этого пользователя"},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-            elif user == subscribe_to:
-                return Response(
-                    {"detail": "Вы не можете подписаться на самого себя"},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-            Subscription.objects.create(
-                subscriber=user,
-                subscribed_to=subscribe_to)
+            serializer.is_valid(raise_exception=True)
+            subscription = serializer.save()
+            subscribe_to = subscription.subscribed_to
             recipes_limit = request.query_params.get('recipes_limit')
-            serializer = UserWithRecipesSerializer(
+            serializer_response = UserWithRecipesSerializer(
                 subscribe_to,
                 many=False,
                 context={
@@ -174,23 +155,11 @@ class UserView(viewsets.ModelViewSet):
                     'recipes_limit': recipes_limit
                 }
             )
-            response_data = serializer.data
+            response_data = serializer_response.data
             response_data['is_subscribed'] = True
-            return Response(
-                response_data,
-                status=status.HTTP_201_CREATED
-            )
+            return Response(response_data, status=status.HTTP_201_CREATED)
+
         elif request.method == "DELETE":
-            if not Subscription.objects.filter(
-                subscriber=user, subscribed_to=subscribe_to
-            ).exists():
-                return Response(
-                    {"detail": "Вы не подписаны на этого пользователя"},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-            Subscription.objects.filter(
-                subscriber=user, subscribed_to=subscribe_to
-            ).delete()
-            return Response(
-                status=status.HTTP_204_NO_CONTENT
-            )
+            serializer.is_valid(raise_exception=True)
+            serializer.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)

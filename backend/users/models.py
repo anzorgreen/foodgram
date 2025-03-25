@@ -33,6 +33,17 @@ class User(AbstractUser):
     def __str__(self):
         return f'{self.first_name} {self.last_name}'
 
+    def clean(self):
+        if not self.first_name:
+            raise ValidationError(
+                'Введите имя'
+            )
+        elif not self.last_name:
+            raise ValidationError(
+                'Введите фамилию'
+            )
+        super().clean()
+
 
 class CustomObtainAuthToken(ObtainAuthToken):
     """Кастомный класс для аутентификации через email и пароль."""
@@ -114,7 +125,7 @@ class Favorite(BaseModel):
         null=True,
         blank=True,
         on_delete=models.CASCADE,
-        related_name='favorites',
+        related_name='favorited_by',
         verbose_name='Рецепты',
     )
     user = models.ForeignKey(
@@ -135,3 +146,13 @@ class Favorite(BaseModel):
 
     def __str__(self):
         return f'{self.user} добавил {self.recipe} в избранное'
+
+    def clean(self):
+        super().clean()
+        if Favorite.objects.filter(
+            user=self.user,
+            recipe=self.recipe
+        ).exclude(pk=self.pk).exists():
+            raise ValidationError(
+                "Этот рецепт уже добавлен в избранное."
+            )

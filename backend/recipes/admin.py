@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Ingredient, Recipe, RecipeIngredient, Tag
+from .models import Cart, Ingredient, Recipe, RecipeIngredient, Tag
 
 
 class RecipeIngredientInline(admin.TabularInline):
@@ -62,6 +62,29 @@ class IngredientAdmin(admin.ModelAdmin):
     )
 
 
+class RecipeInline(admin.TabularInline):
+    """Inline-добавление рецептов в корзину."""
+
+    model = Recipe
+    extra = 1
+    fields = (
+        'name',
+        'description',
+        'author',
+    )
+
+
+class CartAdmin(admin.ModelAdmin):
+    """Отображение корзин пользователей в админке."""
+
+    list_display = (
+        'user',
+        'created_at',
+    )
+    inlines = (RecipeInline,)
+
+
+admin.site.register(Cart)
 admin.site.register(Recipe, RecipeAdmin)
 admin.site.register(Ingredient, IngredientAdmin)
 admin.site.register(Tag, TagAdmin)

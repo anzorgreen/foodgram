@@ -1,6 +1,6 @@
-from cart.models import Cart
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
+from recipes.models import Cart
 
 from .models import Favorite, Subscription, User
 

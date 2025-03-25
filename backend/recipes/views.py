@@ -1,82 +1,85 @@
-
 from io import StringIO
 
-from cart.models import Cart
+from django.core.exceptions import ValidationError
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import status, viewsets
 from rest_framework.decorators import action, api_view
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
-from users.models import Favorite
-from utils.pagination import CustomPageNumberPagination
+
+from backend.pagination import CustomPageNumberPagination
+from backend.permissions import IsOwnerOrReadOnly, StrictAuthenticated
 
 from .filters import IngredientFilter, RecipeFilter
 from .models import Ingredient, Recipe, Tag
-from .permissions import IsOwnerOrReadOnly
-from .serializers import (IngredientSerializer, RecipeBriefSerializer,
-                          RecipeFullSerializer, TagSerializer)
+from .serializers import (CartSerializer, FavoriteSerializer,
+                          IngredientSerializer, RecipeBriefSerializer,
+                          RecipeReadSerializer, RecipeWriteSerializer,
+                          TagSerializer)
 from .utils import get_ingredients_from_cart
 
 
 class RecipeView(viewsets.ModelViewSet):
     """Представление для рецептов."""
 
-    serializer_class = RecipeFullSerializer
+    serializer_class = RecipeReadSerializer
     queryset = Recipe.objects.all()
     filter_backends = (DjangoFilterBackend,)
     filterset_class = RecipeFilter
     pagination_class = CustomPageNumberPagination
 
     def get_permissions(self):
-        """Возвращает права доступа в зависимости от действия."""
         if self.action in ('list', 'retrieve', 'recipe_by_link'):
             return (AllowAny(),)
         elif self.action in ('update', 'partial_update', 'destroy',):
             return (IsOwnerOrReadOnly(),)
-        return (IsAuthenticated(),)
+        return (StrictAuthenticated(),)
 
     def get_serializer_class(self):
-        """Возвращает сериализатор в зависимости от действия."""
         if self.action == 'favorite':
             return RecipeBriefSerializer
+        elif self.action in ('updata', 'partial_update', 'create', 'destroy'):
+            return RecipeWriteSerializer
         return super().get_serializer_class()
 
     @action(detail=True, methods=['post', 'delete'], url_path='shopping_cart')
     def manage_cart(self, request, pk=None):
-        """Добавляет или удаляет рецепт из корзины пользователя."""
+        """Добавить или удалить рецепт из корзины пользователя."""
         recipe = self.get_object()
         user = request.user
-        cart, created = Cart.objects.get_or_create(user=user)
-        recipes_in_cart = cart.recipes.all()
+        cart_serializer = CartSerializer(
+            data={'recipe_id': recipe.id},
+            context={'request': request})
+
         if request.method == 'POST':
-            if recipe in recipes_in_cart:
+            try:
+                cart_serializer.add_recipe(user, recipe)
+                serializer = RecipeBriefSerializer(
+                    recipe, context={'request': request}
+                )
                 return Response(
-                    {'detail': 'Рецепт уже в корзине.'},
+                    serializer.data,
+                    status=status.HTTP_201_CREATED)
+            except ValidationError as e:
+                return Response(
+                    {'detail': str(e)},
                     status=status.HTTP_400_BAD_REQUEST
                 )
-            cart.recipes.add(recipe)
-            serializer = RecipeBriefSerializer(
-                recipe,
-                many=False,
-                context={'request': request}
-            )
-            return Response(
-                serializer.data,
-                status=status.HTTP_201_CREATED
-            )
+
         elif request.method == 'DELETE':
-            if recipe not in recipes_in_cart:
+            try:
+                cart_serializer.remove_recipe(user, recipe)
                 return Response(
-                    {'detail': 'Такого рецепта не было в корзине.'},
+                    {'detail': 'Рецепт успешно удалён из корзины.'},
+                    status=status.HTTP_204_NO_CONTENT
+                )
+            except ValidationError as e:
+                return Response(
+                    {'detail': str(e)},
                     status=status.HTTP_400_BAD_REQUEST
                 )
-            cart.recipes.remove(recipe)
-            return Response(
-                {'detail': 'Рецепт успешно удалён из корзины.'},
-                status=status.HTTP_204_NO_CONTENT
-            )
 
     @action(detail=False, methods=['get'], url_path='download_shopping_cart')
     def download_shopping_cart(self, request):
@@ -102,33 +105,42 @@ class RecipeView(viewsets.ModelViewSet):
         """Добавляет или удаляет рецепт из избранного пользователя."""
         recipe = get_object_or_404(Recipe, pk=pk)
         user = request.user
+        favorite_serializer = FavoriteSerializer(
+            data={'recipe_id': recipe.id},
+            context={'request': request}
+        )
+
         if request.method == 'POST':
-            if Favorite.objects.filter(user=user, recipe=recipe).exists():
-                return Response(
-                    {'detail': 'Рецепт уже добавлен в избранное.'},
-                    status=status.HTTP_400_BAD_REQUEST
+            try:
+                favorite_serializer.add_to_favorite(user, recipe)
+                serializer = RecipeBriefSerializer(
+                    recipe,
+                    context={'request': request}
                 )
-            Favorite.objects.create(user=user, recipe=recipe)
-            serializer = self.get_serializer(recipe)
-            return Response(
-                serializer.data,
-                status=status.HTTP_201_CREATED
-            )
+                return Response(
+                    serializer.data, status=status.HTTP_201_CREATED
+                )
+            except ValidationError as e:
+                return Response(
+                    {'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST
+                )
+
         elif request.method == 'DELETE':
-            if not Favorite.objects.filter(user=user, recipe=recipe).exists():
+            try:
+                favorite_serializer.remove_from_favorite(user, recipe)
                 return Response(
-                    {'detail': 'Рецепта нет в избранном.'},
+                    {'detail': 'Рецепт удалён из избранного.'},
+                    status=status.HTTP_204_NO_CONTENT
+                )
+            except ValidationError as e:
+                return Response(
+                    {'detail': str(e)},
                     status=status.HTTP_400_BAD_REQUEST
                 )
-            Favorite.objects.filter(user=user, recipe=recipe).delete()
-            return Response(
-                {'detail': 'Рецепт удалён из избранного.'},
-                status=status.HTTP_204_NO_CONTENT
-            )
 
     @action(detail=True, methods=['get'], url_path='get-link')
     def recipe_by_link(self, request, pk=None):
-        """Генерирует короткую ссылку на рецепт."""
+        """Создать короткую ссылку на рецепт."""
         short_link = get_object_or_404(Recipe, id=pk).generate_short_url()
         return Response(
             {"short-link": short_link}
@@ -137,9 +149,9 @@ class RecipeView(viewsets.ModelViewSet):
 
 @api_view(['GET'])
 def recipe_by_short_url(request, short_url):
-    """Получает рецепт по короткой ссылке."""
+    """Получить рецепт по короткой ссылке."""
     recipe = get_object_or_404(Recipe, short_url=short_url)
-    serializer = RecipeFullSerializer(recipe, context={'request': request})
+    serializer = RecipeReadSerializer(recipe, context={'request': request})
     return Response(serializer.data)
 
 

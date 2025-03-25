@@ -60,8 +60,8 @@ class RecipeFilter(FilterSet):
         if not user.is_authenticated:
             return queryset.all()
         if value:
-            return queryset.filter(favorites__user=user)
-        return queryset.exclude(favorites__user=user)
+            return queryset.filter(favorited_by__user=user)
+        return queryset.exclude(favorited_by__user=user)
 
     def filter_is_in_shopping_cart(self, queryset, name, value):
         """Фильтрует рецепты по тому, находятся ли они в корзине."""
