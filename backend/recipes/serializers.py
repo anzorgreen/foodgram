@@ -87,8 +87,6 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         """Создание рецепта с ингредиентами и тегами."""
-        request = self.context.get('request')
-        print(request.user)
         tags = validated_data.pop('tags', [])
         ingredients_data = validated_data.pop('ingredients')
         recipe = Recipe.objects.create(**validated_data)
@@ -128,7 +126,6 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
         return RecipeReadSerializer(instance, context=self.context).data
 
     def validate(self, attrs):
-        print(self)
         if self.partial:
             if 'ingredients' not in attrs:
                 raise serializers.ValidationError(
