@@ -92,23 +92,17 @@ WSGI_APPLICATION = 'backend.wsgi.application'
 # https://docs.djangoproject.com/en/3.2/ref/settings/#databases
 
 
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.postgresql',
-#         'NAME': os.getenv('POSTGRES_DB', 'foodgram_database'),
-#         'USER': os.getenv('POSTGRES_USER', 'foodgram_user'),
-#         'PASSWORD': os.getenv('POSTGRES_PASSWORD', 'foodgram_project'),
-#         'HOST': os.getenv('POSTGRES_HOST', 'foodgram_db'),
-#         'PORT': os.getenv('POSTGRES_PORT', '5432'),
-#     }
-# }
-
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': os.getenv('POSTGRES_DB', 'foodgram_database'),
+        'USER': os.getenv('POSTGRES_USER', 'foodgram_user'),
+        'PASSWORD': os.getenv('POSTGRES_PASSWORD', 'foodgram_project'),
+        'HOST': os.getenv('POSTGRES_HOST', 'foodgram_db'),
+        'PORT': os.getenv('POSTGRES_PORT', '5432'),
     }
 }
+
 
 # Author model
 # https://docs.djangoproject.com/en/3.2/ref/settings/#auth-password-validators

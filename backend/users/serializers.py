@@ -226,5 +226,4 @@ class SubscriptionSerializer(serializers.Serializer):
             raise serializers.ValidationError(
                 "Вы не подписаны на этого пользователя"
             )
-
         subscription.delete()

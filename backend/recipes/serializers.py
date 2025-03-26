@@ -134,6 +134,7 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError(
                     'Необходимо указать хотя бы один тег'
                 )
+        return attrs
 
     def validate_name(self, value):
         request = self.context.get('request')
