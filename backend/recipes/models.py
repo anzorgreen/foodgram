@@ -69,14 +69,6 @@ class Recipe(BaseModel):
             )
         ]
 
-    def clean(self):
-        if self.cooking_time < MIN_COOKING_TIME:
-            raise ValidationError(
-                f'Поле "cooking_time" ожидает число'
-                f' большее или равное {MIN_COOKING_TIME}'
-            )
-        super().clean()
-
     def __str__(self):
         return f'{self.name} (Автор: {self.author})'
 
@@ -95,6 +87,11 @@ class Recipe(BaseModel):
         if self.pk and not self.ingredients.exists():
             raise ValidationError(
                 'Рецепт должен содержать хотя бы один ингредиент.'
+            )
+        if self.cooking_time < MIN_COOKING_TIME:
+            raise ValidationError(
+                f'Поле "cooking_time" ожидает число'
+                f' большее или равное {MIN_COOKING_TIME}'
             )
         super().clean()
 
