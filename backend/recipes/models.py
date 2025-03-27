@@ -66,16 +66,16 @@ class Recipe(BaseModel):
             models.UniqueConstraint(
                 fields=['name', 'author'],
                 name='unique_name_author'
-            ),
-            models.CheckConstraint(
-                check=models.Q(cooking_time__gte=MIN_COOKING_TIME),
-                name='cooking_time_validation',
-                violation_error_message=(
-                    f'Поле "cooking_time" ожидает число'
-                    f' большее или равное {MIN_COOKING_TIME}'
-                )
             )
         ]
+
+    def clean(self):
+        if self.cooking_time < MIN_COOKING_TIME:
+            raise ValidationError(
+                f'Поле "cooking_time" ожидает число'
+                f' большее или равное {MIN_COOKING_TIME}'
+            )
+        super().clean()
 
     def __str__(self):
         return f'{self.name} (Автор: {self.author})'
@@ -193,16 +193,14 @@ class RecipeIngredient(models.Model):
         verbose_name = 'Связь рецепт - ингредиент'
         verbose_name_plural = 'Связи рецепт - ингредиенты'
         ordering = ('recipe__name',)
-        constraints = [
-            models.CheckConstraint(
-                check=models.Q(amount__gte=MIN_INGREDIENT_AMOUNT),
-                name='amount_validation',
-                violation_error_message=(
-                    f'Поле "amount" ожидает число '
-                    f'большее или равное {MIN_INGREDIENT_AMOUNT}'
-                )
-            ),
-        ]
+
+    def clean(self):
+        if self.amount < MIN_INGREDIENT_AMOUNT:
+            raise ValidationError(
+                f'Поле "amount" ожидает число '
+                f'большее или равное {MIN_INGREDIENT_AMOUNT}'
+            )
+        super().clean()
 
     def __str__(self):
         return (
