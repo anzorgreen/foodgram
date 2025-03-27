@@ -1,8 +1,7 @@
 from django.urls import include, path
 from rest_framework import routers
 
-from .models import CustomObtainAuthToken
-from .views import UserView
+from .views import CustomObtainAuthToken, UserView
 
 router = routers.DefaultRouter()
 router.register('users', UserView, basename='user')
@@ -15,4 +14,5 @@ urlpatterns = [
         CustomObtainAuthToken.as_view(),
         name='custom-token-login'
     ),
+    path('users/', include('djoser.urls')),
 ]

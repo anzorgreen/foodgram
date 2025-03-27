@@ -2,13 +2,15 @@ import base64
 
 from django.core.files.base import ContentFile
 from rest_framework import status, viewsets
+from rest_framework.authentication import authenticate
+from rest_framework.authtoken.models import Token
+from rest_framework.authtoken.views import ObtainAuthToken
 from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 
 from backend.pagination import CustomPageNumberPagination
 from backend.permissions import IsOwnerOrReadOnly, StrictAuthenticated
-
 from .models import User
 from .serializers import (ChangePasswordSerializer, SubscriptionSerializer,
                           UserCreateSerializer, UserListSerializer,
@@ -163,3 +165,20 @@ class UserView(viewsets.ModelViewSet):
             serializer.is_valid(raise_exception=True)
             serializer.delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class CustomObtainAuthToken(ObtainAuthToken):
+    """Кастомный класс для аутентификации через email и пароль."""
+
+    permission_classes = [AllowAny]
+
+    def post(self, request, *args, **kwargs):
+        """Обработка POST-запроса для аутентификации и создания токена."""
+        email = request.data.get('email')
+        password = request.data.get('password')
+
+        user = authenticate(request, username=email, password=password)
+        if user is not None:
+            token, created = Token.objects.get_or_create(user=user)
+            return Response({'token': token.key})
+        return Response({'detail': 'Invalid credentials'}, status=400)

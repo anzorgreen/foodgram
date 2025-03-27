@@ -30,7 +30,7 @@ class Recipe(BaseModel):
     )
     image = models.ImageField(
         default=None,
-        null=True,
+        blank=False,
         verbose_name='Изображение',
         upload_to='recipes/images/'
     )
@@ -41,7 +41,7 @@ class Recipe(BaseModel):
     )
     author = models.ForeignKey(
         'users.User',
-        null=False,
+        blank=False,
         on_delete=models.CASCADE,
         related_name='recipes',
         verbose_name='Автор'
@@ -150,7 +150,7 @@ class Ingredient(BaseModel):
         verbose_name='Ингредиент'
     )
     measurement_unit = models.CharField(
-        max_length=50,
+        max_length=MAX_LENGTH_SLUG,
         blank=False,
         null=False,
         verbose_name='Единица измерения'
@@ -160,6 +160,11 @@ class Ingredient(BaseModel):
         verbose_name = 'Ингредиент'
         verbose_name_plural = 'Ингредиенты'
         ordering = ('name',)
+        constraints = [
+            models.UniqueConstraint(
+                fields=['name', 'measurement_unit'],
+                name='unique_ingredient')
+        ]
 
     def __str__(self):
         return f'{self.name} ({self.measurement_unit})'
@@ -196,7 +201,7 @@ class RecipeIngredient(models.Model):
                     f'Поле "amount" ожидает число '
                     f'большее или равное {MIN_INGREDIENT_AMOUNT}'
                 )
-            )
+            ),
         ]
 
     def __str__(self):
@@ -220,7 +225,7 @@ class Cart(models.Model):
         verbose_name='Пользователь'
     )
     recipes = models.ManyToManyField(
-        'recipes.Recipe',
+        'Recipe',
         related_name='carts',
         verbose_name='Рецепт',
     )
@@ -234,3 +239,31 @@ class Cart(models.Model):
         return (f'Корзина пользователя '
                 f'{self.user.first_name} {self.user.last_name}'
                 f' ({self.user.username})')
+
+
+class Favorite(BaseModel):
+    """Модель избранных рецептов."""
+
+    recipe = models.ForeignKey(
+        'Recipe',
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        related_name='favorited_by',
+        verbose_name='Рецепты',
+    )
+    user = models.ForeignKey(
+        'users.User',
+        blank=True,
+        on_delete=models.CASCADE,
+        related_name='favorites',
+        verbose_name='В избранных'
+    )
+
+    class Meta:
+        verbose_name = 'Избранный рецепт'
+        verbose_name_plural = 'Избранные рецепты'
+        constraints = [
+            models.UniqueConstraint(
+                fields=['recipe', 'user'],
+                name='unique_favorite')]

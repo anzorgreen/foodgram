@@ -4,12 +4,11 @@ from django.core.exceptions import ValidationError
 from django.core.validators import RegexValidator
 from django.shortcuts import get_object_or_404
 from djoser.serializers import TokenCreateSerializer
-from recipes.models import Recipe
 from rest_framework import serializers
 from rest_framework.validators import UniqueValidator
 
-from backend.settings import MAX_LENTHG_SHORT_NAME
-
+from backend.settings import MAX_LENTGHT_EMAIL, MAX_LENTHG_SHORT_NAME
+from recipes.models import Recipe
 from .models import Subscription, User
 
 
@@ -24,8 +23,7 @@ class UserListSerializer(serializers.ModelSerializer):
         request = self.context.get('request')
         if not request or not request.user.is_authenticated:
             return False
-        return Subscription.objects.filter(
-            subscriber=request.user, subscribed_to=obj).exists()
+        return obj.subscribers.filter(id=request.user.id).exists()
 
     class Meta:
         model = User
@@ -39,7 +37,7 @@ class UserCreateSerializer(serializers.ModelSerializer):
     """Сериализатор для создания нового пользователя."""
 
     email = serializers.EmailField(
-        max_length=254,
+        max_length=MAX_LENTGHT_EMAIL,
         required=True,
         validators=[UniqueValidator(
             queryset=User.objects.all(),
@@ -47,7 +45,7 @@ class UserCreateSerializer(serializers.ModelSerializer):
         )]
     )
     username = serializers.CharField(
-        max_length=150,
+        max_length=MAX_LENTHG_SHORT_NAME,
         required=True,
         validators=[
             RegexValidator(

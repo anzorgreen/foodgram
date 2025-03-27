@@ -29,9 +29,6 @@ class RecipeFilter(FilterSet):
         field_name='author__first_name',
         lookup_expr='icontains'
     )
-    author = filters.NumberFilter(
-        field_name='author__id'
-    )
     is_favorited = filters.BooleanFilter(
         method='filter_is_favorited'
     )

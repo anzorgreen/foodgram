@@ -11,6 +11,7 @@ ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost').split(', ')
 # Constants
 MAX_LENGTH_TEXT = 1000
 MAX_LENGTH_NAME = 256
+MAX_LENTGHT_EMAIL = 254
 MAX_LENTHG_SHORT_NAME = 150
 MAX_LENGTH_SLUG = 50
 ITEMS_ON_PAGE = 6
@@ -91,7 +92,6 @@ WSGI_APPLICATION = 'backend.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/3.2/ref/settings/#databases
 
-
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
@@ -102,7 +102,6 @@ DATABASES = {
         'PORT': os.getenv('POSTGRES_PORT', '5432'),
     }
 }
-
 
 # Author model
 # https://docs.djangoproject.com/en/3.2/ref/settings/#auth-password-validators
