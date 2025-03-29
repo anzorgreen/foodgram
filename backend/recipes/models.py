@@ -262,3 +262,6 @@ class Favorite(BaseModel):
             models.UniqueConstraint(
                 fields=['recipe', 'user'],
                 name='unique_favorite')]
+
+    def __str__(self):
+        return f'Рецепт "{self.recipe}" в избранном у пользователя {self.user}'

@@ -8,7 +8,6 @@ from rest_framework import serializers
 from rest_framework.validators import UniqueValidator
 
 from backend.settings import MAX_LENTGHT_EMAIL, MAX_LENTHG_SHORT_NAME
-from recipes.models import Recipe
 from .models import Subscription, User
 
 
@@ -115,7 +114,7 @@ class UserWithRecipesSerializer(UserListSerializer):
     def get_recipes(self, obj):
         """Получение рецептов пользователя с учетом лимита."""
         recipes_limit = self.context.get('recipes_limit')
-        recipes = Recipe.objects.filter(author=obj)
+        recipes = obj.recipes.all()
         if recipes_limit:
             try:
                 recipes_limit = int(recipes_limit)
@@ -166,11 +165,11 @@ class ChangePasswordSerializer(serializers.ModelSerializer):
 
         if not user.check_password(data['current_password']):
             raise serializers.ValidationError({
-                'current_password': "Старый пароль неверный"
+                'current_password': 'Старый пароль неверный'
             })
         if data['new_password'] == data['current_password']:
             raise serializers.ValidationError({
-                'new_password': "Новый пароль не должен совпадать с текущим"
+                'new_password': 'Новый пароль не должен совпадать с текущим'
             })
         return data
 
@@ -189,7 +188,7 @@ class SubscriptionSerializer(serializers.Serializer):
 
         if user == subscribe_to:
             raise serializers.ValidationError(
-                "Вы не можете подписаться на самого себя"
+                'Вы не можете подписаться на самого себя'
             )
         return subscribe_to
 
@@ -203,7 +202,7 @@ class SubscriptionSerializer(serializers.Serializer):
             subscribed_to=subscribe_to
         ).exists():
             raise serializers.ValidationError(
-                "Вы уже подписаны на этого пользователя"
+                'Вы уже подписаны на этого пользователя'
             )
 
         return Subscription.objects.create(
@@ -222,6 +221,20 @@ class SubscriptionSerializer(serializers.Serializer):
         )
         if not subscription.exists():
             raise serializers.ValidationError(
-                "Вы не подписаны на этого пользователя"
+                'Вы не подписаны на этого пользователя'
             )
         subscription.delete()
+
+    def to_representation(self, instance):
+        subscribe_to = instance.subscribed_to
+        recipes_limit = self.context.get('recipes_limit')
+        serializer = UserWithRecipesSerializer(
+            subscribe_to,
+            context={
+                'request': self.context.get('request'),
+                'recipes_limit': recipes_limit
+            }
+        )
+        data = serializer.data
+        data['is_subscribed'] = True
+        return data

@@ -4,9 +4,20 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 SITE_DOMAIN = 'https://foodgramproject.sytes.net'
-SECRET_KEY = os.getenv('SECRET_KEY', '')
-DEBUG = os.getenv('DEBUG', 'false').lower() == 'true'
-ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost').split(', ')
+# SECRET_KEY = os.getenv('SECRET_KEY', '')
+# DEBUG = os.getenv('DEBUG', 'false').lower() == 'true'
+# ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost').split(', ')
+
+ALLOWED_HOSTS = ['localhost', '127.0.0.1']
+DEBUG = True
+SECRET_KEY = 'django-insecure-so9@ad&s1ntm)1fqar98j$ap5caky%k0u2mcf6rm@5oqo*))&x'
+
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
+    }
+}
 
 # Constants
 MAX_LENGTH_TEXT = 1000
@@ -92,16 +103,16 @@ WSGI_APPLICATION = 'backend.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/3.2/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.getenv('POSTGRES_DB', 'foodgram_database'),
-        'USER': os.getenv('POSTGRES_USER', 'foodgram_user'),
-        'PASSWORD': os.getenv('POSTGRES_PASSWORD', 'foodgram_project'),
-        'HOST': os.getenv('POSTGRES_HOST', 'foodgram_db'),
-        'PORT': os.getenv('POSTGRES_PORT', '5432'),
-    }
-}
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.postgresql',
+#         'NAME': os.getenv('POSTGRES_DB', 'foodgram_database'),
+#         'USER': os.getenv('POSTGRES_USER', 'foodgram_user'),
+#         'PASSWORD': os.getenv('POSTGRES_PASSWORD', 'foodgram_project'),
+#         'HOST': os.getenv('POSTGRES_HOST', 'foodgram_db'),
+#         'PORT': os.getenv('POSTGRES_PORT', '5432'),
+#     }
+# }
 
 # Author model
 # https://docs.djangoproject.com/en/3.2/ref/settings/#auth-password-validators

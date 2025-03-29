@@ -61,39 +61,43 @@ class UserView(viewsets.ModelViewSet):
             avatar_data = request.data.get('avatar')
             if not avatar_data:
                 return Response(
-                    {"detail": "Поле 'avatar' обязательно."},
+                    {'detail': 'Поле "avatar" обязательно.'},
                     status=status.HTTP_400_BAD_REQUEST
                 )
             try:
                 format, imgstr = avatar_data.split(';base64,')
-                img_data = base64.b64decode(imgstr)
-                file_name = 'avatar.png'
-                avatar_file = ContentFile(img_data, name=file_name)
-                if user.avatar:
-                    user.avatar.delete(save=False)
-                user.avatar.save(file_name, avatar_file, save=True)
-                avatar_url = request.build_absolute_uri(user.avatar.url)
+            except ValueError:
                 return Response(
-                    {
-                        "avatar": avatar_url
-                    },
-                    status=status.HTTP_200_OK
-                )
-            except Exception as e:
-                return Response(
-                    {"detail": f"Ошибка при обработке аватара: {str(e)}"},
+                    {'detail': 'Неверный формат аватара.'},
                     status=status.HTTP_400_BAD_REQUEST
                 )
-        elif request.method == 'DELETE':
+            try:
+                img_data = base64.b64decode(imgstr)
+            except Exception as e:
+                return Response(
+                    {'detail': f'Ошибка при декодировании аватара: {str(e)}'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            file_name = 'avatar.png'
+            avatar_file = ContentFile(img_data, name=file_name)
+            if user.avatar:
+                user.avatar.delete(save=False)
+            user.avatar.save(file_name, avatar_file, save=True)
+            avatar_url = request.build_absolute_uri(user.avatar.url)
+            return Response(
+                {'avatar': avatar_url},
+                status=status.HTTP_200_OK
+            )
+        else:
             user = request.user
             if not user.avatar:
                 return Response(
-                    {"detail": "Аватар не найден."},
+                    {'detail': 'Аватар не найден.'},
                     status=status.HTTP_404_NOT_FOUND
                 )
             user.avatar.delete()
             return Response(
-                {"detail": "Аватар успешно удален."},
+                {'detail': 'Аватар успешно удален.'},
                 status=status.HTTP_204_NO_CONTENT
             )
 
@@ -109,7 +113,7 @@ class UserView(viewsets.ModelViewSet):
         user.set_password(new_password)
         user.save()
         return Response(
-            {"detail": "Пароль успешно изменён."},
+            {'detail': 'Пароль успешно изменён.'},
             status=status.HTTP_204_NO_CONTENT
         )
 
@@ -117,10 +121,9 @@ class UserView(viewsets.ModelViewSet):
     def get_subscriptions(self, request):
         """Получить подписчиков пользователя."""
         user = request.user
-        subscriptions = user.subscriptions.all()
-        users_i_follow = [
-            subscription.subscribed_to for subscription in subscriptions
-        ]
+        users_i_follow = users_i_follow = User.objects.filter(
+            subscribers__subscriber=user
+        ).distinct()
         paginator = self.pagination_class()
         paginated_subscribers = paginator.paginate_queryset(
             users_i_follow, request
@@ -144,24 +147,12 @@ class UserView(viewsets.ModelViewSet):
             context={'request': request}
         )
 
-        if request.method == "POST":
+        if request.method == 'POST':
             serializer.is_valid(raise_exception=True)
-            subscription = serializer.save()
-            subscribe_to = subscription.subscribed_to
-            recipes_limit = request.query_params.get('recipes_limit')
-            serializer_response = UserWithRecipesSerializer(
-                subscribe_to,
-                many=False,
-                context={
-                    'request': request,
-                    'recipes_limit': recipes_limit
-                }
-            )
-            response_data = serializer_response.data
-            response_data['is_subscribed'] = True
-            return Response(response_data, status=status.HTTP_201_CREATED)
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
 
-        elif request.method == "DELETE":
+        else:
             serializer.is_valid(raise_exception=True)
             serializer.delete()
             return Response(status=status.HTTP_204_NO_CONTENT)

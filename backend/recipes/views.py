@@ -45,27 +45,20 @@ class RecipeView(viewsets.ModelViewSet):
     @action(detail=True, methods=['post', 'delete'], url_path='shopping_cart')
     def manage_cart(self, request, pk=None):
         """Добавить или удалить рецепт из корзины пользователя."""
-        recipe = self.get_object()
+        recipe = get_object_or_404(Recipe, pk=pk)
         user = request.user
         cart_serializer = CartSerializer(
             data={'recipe_id': recipe.id},
             context={'request': request})
         cart_serializer.is_valid(raise_exception=True)
+        cart, _ = Cart.objects.get_or_create(user=user)
         if request.method == 'POST':
-            cart, _ = Cart.objects.get_or_create(user=user)
-            if cart.recipes.filter(id=recipe.id).exists():
-                return Response(
-                    {'detail': 'Рецепт уже в корзине.'},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
             cart.recipes.add(recipe)
             serializer = RecipeBriefSerializer(
                 recipe,
                 context={'request': request})
             return Response(serializer.data, status=status.HTTP_201_CREATED)
-
-        elif request.method == 'DELETE':
-            cart = Cart.objects.filter(user=user).first()
+        else:
             cart.recipes.remove(recipe)
             return Response(
                 {'detail': 'Рецепт успешно удалён из корзины.'},
@@ -108,7 +101,7 @@ class RecipeView(viewsets.ModelViewSet):
                 context={'request': request})
             return Response(serializer.data, status=status.HTTP_201_CREATED)
 
-        elif request.method == 'DELETE':
+        else:
             favorite = Favorite.objects.filter(
                 user=user,
                 recipe=recipe
@@ -122,7 +115,7 @@ class RecipeView(viewsets.ModelViewSet):
         """Создать короткую ссылку на рецепт."""
         short_link = get_object_or_404(Recipe, id=pk).generate_short_url()
         return Response(
-            {"short-link": short_link}
+            {'short-link': short_link}
         )
 
 

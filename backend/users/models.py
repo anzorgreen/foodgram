@@ -96,7 +96,7 @@ class Subscription(BaseModel):
         """Проверка, чтобы пользователь не мог подписаться на самого себя."""
         if self.subscriber == self.subscribed_to:
             raise ValidationError(
-                "Вы не можете подписываться на самого себя."
+                'Вы не можете подписываться на самого себя.'
             )
 
     def save(self, *args, **kwargs):
