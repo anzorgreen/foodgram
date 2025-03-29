@@ -117,7 +117,7 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 {'tags': 'Необходимо указать хотя бы один тег.'}
             )
-    
+
         if 'ingredients' not in validated_data:
             raise serializers.ValidationError(
                 {'ingredients': 'Необходимо указать ингредиенты.'}
