@@ -61,8 +61,7 @@ class CustomUserAdmin(UserAdmin):
     )
     ordering = ('id',)
     inlines = (
-        FavouriteInline, CartInline,
-        SubscriptionsInline, SubscribersInline,
+        FavouriteInline, CartInline, SubscriptionsInline, SubscribersInline
     )
 
 
