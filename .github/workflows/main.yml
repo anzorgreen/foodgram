@@ -104,5 +104,3 @@ jobs:
             sudo docker compose -f docker-compose.production.yml down
             sudo docker compose -f docker-compose.production.yml up -d --wait
             sudo docker exec foodgram-back python manage.py migrate
-            sudo docker exec foodgram-back python manage.py collectstatic
-            yes
