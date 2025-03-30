@@ -76,6 +76,7 @@ jobs:
       - name: Copy docs via scp
         uses: appleboy/scp-action@master
         with:
+          timeout: 30s
           host: ${{ secrets.HOST }}
           username: ${{ secrets.USER }}
           key: ${{ secrets.SSH_KEY }}
