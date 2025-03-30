@@ -50,14 +50,12 @@ class UserView(viewsets.ModelViewSet):
     @action(detail=False, methods=['get'], url_path='me')
     def get_me(self, request, pk=None):
         """Получить данные текущего пользователя."""
-        serializer = self.get_serializer(request.user)
-        return Response(serializer.data)
+        return Response(self.get_serializer(request.user).data)
 
     @action(detail=False, methods=['put', 'delete'], url_path='me/avatar')
     def manage_avatar(self, request, pk=None):
         """Управление аватаром пользователя."""
         if request.method == 'PUT':
-            user = request.user
             avatar_data = request.data.get('avatar')
             if not avatar_data:
                 return Response(
@@ -78,40 +76,36 @@ class UserView(viewsets.ModelViewSet):
                     {'detail': f'Ошибка при декодировании аватара: {str(e)}'},
                     status=status.HTTP_400_BAD_REQUEST
                 )
-            file_name = 'avatar.png'
-            avatar_file = ContentFile(img_data, name=file_name)
-            if user.avatar:
-                user.avatar.delete(save=False)
-            user.avatar.save(file_name, avatar_file, save=True)
-            avatar_url = request.build_absolute_uri(user.avatar.url)
+            avatar_file = ContentFile(img_data, name='avatar.png')
+            if request.user.avatar:
+                request.user.avatar.delete(save=False)
+            request.user.avatar.save('avatar.png', avatar_file, save=True)
+            avatar_url = request.build_absolute_uri(request.user.avatar.url)
             return Response(
                 {'avatar': avatar_url},
                 status=status.HTTP_200_OK
             )
-        else:
-            user = request.user
-            if not user.avatar:
-                return Response(
-                    {'detail': 'Аватар не найден.'},
-                    status=status.HTTP_404_NOT_FOUND
-                )
-            user.avatar.delete()
+        if not request.user.avatar:
             return Response(
-                {'detail': 'Аватар успешно удален.'},
-                status=status.HTTP_204_NO_CONTENT
+                {'detail': 'Аватар не найден.'},
+                status=status.HTTP_404_NOT_FOUND
             )
+        request.user.avatar.delete()
+        return Response(
+            {'detail': 'Аватар успешно удален.'},
+            status=status.HTTP_204_NO_CONTENT
+        )
 
     @action(detail=False, methods=('post', ), url_path='set_password')
     def set_password(self, request, pk=None):
         serializer = self.get_serializer(data=request.data)
-        user = request.user
         if not serializer.is_valid():
             return Response(
                 serializer.errors,
                 status=status.HTTP_400_BAD_REQUEST)
         new_password = serializer.validated_data['new_password']
-        user.set_password(new_password)
-        user.save()
+        request.user.set_password(new_password)
+        request.user.save()
         return Response(
             {'detail': 'Пароль успешно изменён.'},
             status=status.HTTP_204_NO_CONTENT
@@ -120,21 +114,19 @@ class UserView(viewsets.ModelViewSet):
     @action(detail=False, methods=['get'], url_path='subscriptions')
     def get_subscriptions(self, request):
         """Получить подписчиков пользователя."""
-        user = request.user
         users_i_follow = users_i_follow = User.objects.filter(
-            subscribers__subscriber=user
+            subscribers__subscriber=request.user
         ).distinct()
         paginator = self.pagination_class()
         paginated_subscribers = paginator.paginate_queryset(
             users_i_follow, request
         )
-        recipes_limit = request.query_params.get('recipes_limit')
         serializer = self.get_serializer(
             paginated_subscribers,
             many=True,
             context={
                 'request': request,
-                'recipes_limit': recipes_limit
+                'recipes_limit': request.query_params.get('recipes_limit')
             }
         )
         return paginator.get_paginated_response(serializer.data)
@@ -146,16 +138,13 @@ class UserView(viewsets.ModelViewSet):
             data={'subscribed_to': pk},
             context={'request': request}
         )
-
         if request.method == 'POST':
             serializer.is_valid(raise_exception=True)
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
-
-        else:
-            serializer.is_valid(raise_exception=True)
-            serializer.delete()
-            return Response(status=status.HTTP_204_NO_CONTENT)
+        serializer.is_valid(raise_exception=True)
+        serializer.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class CustomObtainAuthToken(ObtainAuthToken):

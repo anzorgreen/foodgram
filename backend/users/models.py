@@ -2,6 +2,7 @@ from django.contrib.auth.models import AbstractUser
 from django.core.exceptions import ValidationError
 from django.db import models
 
+from backend.base_model import BaseModel
 from backend.settings import MAX_LENTHG_SHORT_NAME
 
 
@@ -50,21 +51,6 @@ class User(AbstractUser):
         return f'{self.first_name} {self.last_name}'
 
 
-class BaseModel(models.Model):
-    """Абстрактная модель с полями времени создания и обновления."""
-
-    created_at = models.DateTimeField(
-        auto_now_add=True,
-        verbose_name='Дата создания'
-    )
-    updated_at = models.DateTimeField(
-        auto_now=True,
-        verbose_name='Дата обновления')
-
-    class Meta:
-        abstract = True
-
-
 class Subscription(BaseModel):
     """Модель подписки."""
 
@@ -90,7 +76,10 @@ class Subscription(BaseModel):
                 name='unique_subscription')]
 
     def __str__(self):
-        return f'{self.subscriber} подписан на {self.subscribed_to}'
+        return (
+            f'{self.subscriber} ({self.subscriber.id}) '
+            f'подписан на {self.subscribed_to} ({self.subscribed_to.id})'
+        )
 
     def clean(self):
         """Проверка, чтобы пользователь не мог подписаться на самого себя."""

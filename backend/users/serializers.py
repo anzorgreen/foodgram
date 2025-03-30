@@ -22,7 +22,7 @@ class UserListSerializer(serializers.ModelSerializer):
         request = self.context.get('request')
         if not request or not request.user.is_authenticated:
             return False
-        return obj.subscribers.filter(id=request.user.id).exists()
+        return request.user.subscriptions.filter(subscribed_to=obj).exists()
 
     class Meta:
         model = User
@@ -160,10 +160,9 @@ class ChangePasswordSerializer(serializers.ModelSerializer):
 
     def validate(self, data):
         """Валидация текущего пароля и проверка на совпадение."""
-        request = self.context.get('request')
-        user = request.user
-
-        if not user.check_password(data['current_password']):
+        if not self.context.get('request').user.check_password(
+            data['current_password']
+        ):
             raise serializers.ValidationError({
                 'current_password': 'Старый пароль неверный'
             })
@@ -185,56 +184,42 @@ class SubscriptionSerializer(serializers.Serializer):
         """Проверяем, что пользователь существует и не является текущим."""
         user = self.context['request'].user
         subscribe_to = get_object_or_404(User, id=value)
-
-        if user == subscribe_to:
+        subscription = Subscription.objects.filter(
+            subscriber=user,
+            subscribed_to=subscribe_to
+        )
+        if self.context.get('request').method == 'POST':
+            if user == subscribe_to:
+                raise serializers.ValidationError(
+                    'Вы не можете подписаться на самого себя'
+                )
+            if subscription.exists():
+                raise serializers.ValidationError(
+                    'Вы уже подписаны на этого пользователя'
+                )
+        if self.context.get(
+            'request'
+        ).method == 'DELETE' and not subscription.exists():
             raise serializers.ValidationError(
-                'Вы не можете подписаться на самого себя'
+                'Вы не подписаны на этого пользователя'
             )
         return subscribe_to
 
     def create(self, validated_data):
         """Создаем подписку."""
-        user = self.context['request'].user
-        subscribe_to = validated_data['subscribed_to']
-
-        if Subscription.objects.filter(
-            subscriber=user,
-            subscribed_to=subscribe_to
-        ).exists():
-            raise serializers.ValidationError(
-                'Вы уже подписаны на этого пользователя'
-            )
-
         return Subscription.objects.create(
-            subscriber=user,
-            subscribed_to=subscribe_to
+            subscriber=self.context['request'].user,
+            subscribed_to=validated_data['subscribed_to']
         )
 
     def delete(self):
         """Удаляем подписку."""
-        user = self.context['request'].user
-        subscribe_to = self.validated_data['subscribed_to']
-
-        subscription = Subscription.objects.filter(
-            subscriber=user,
-            subscribed_to=subscribe_to
-        )
-        if not subscription.exists():
-            raise serializers.ValidationError(
-                'Вы не подписаны на этого пользователя'
-            )
-        subscription.delete()
+        self.context['request'].user.subscriptions.filter(
+            subscribed_to=self.validated_data['subscribed_to']
+        ).delete()
 
     def to_representation(self, instance):
-        subscribe_to = instance.subscribed_to
-        recipes_limit = self.context.get('recipes_limit')
-        serializer = UserWithRecipesSerializer(
-            subscribe_to,
-            context={
-                'request': self.context.get('request'),
-                'recipes_limit': recipes_limit
-            }
-        )
-        data = serializer.data
-        data['is_subscribed'] = True
-        return data
+        return UserWithRecipesSerializer(
+            instance.subscribed_to,
+            context=self.context
+        ).data

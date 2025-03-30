@@ -11,7 +11,7 @@ from rest_framework.response import Response
 from backend.pagination import CustomPageNumberPagination
 from backend.permissions import IsOwnerOrReadOnly, StrictAuthenticated
 from .filters import IngredientFilter, RecipeFilter
-from .models import Cart, Favorite, Ingredient, Recipe, Tag
+from .models import Ingredient, Recipe, Tag
 from .serializers import (CartSerializer, FavoriteSerializer,
                           IngredientSerializer, RecipeBriefSerializer,
                           RecipeReadSerializer, RecipeWriteSerializer,
@@ -45,25 +45,20 @@ class RecipeView(viewsets.ModelViewSet):
     @action(detail=True, methods=['post', 'delete'], url_path='shopping_cart')
     def manage_cart(self, request, pk=None):
         """Добавить или удалить рецепт из корзины пользователя."""
-        recipe = get_object_or_404(Recipe, pk=pk)
-        user = request.user
-        cart_serializer = CartSerializer(
-            data={'recipe_id': recipe.id},
-            context={'request': request})
-        cart_serializer.is_valid(raise_exception=True)
-        cart, _ = Cart.objects.get_or_create(user=user)
+        data = {'recipe_id': pk}
+        serializer = CartSerializer(data=data, context={'request': request})
+        serializer.is_valid(raise_exception=True)
         if request.method == 'POST':
-            cart.recipes.add(recipe)
-            serializer = RecipeBriefSerializer(
-                recipe,
-                context={'request': request})
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        else:
-            cart.recipes.remove(recipe)
+            recipe_data = serializer.save()
             return Response(
-                {'detail': 'Рецепт успешно удалён из корзины.'},
-                status=status.HTTP_204_NO_CONTENT
+                CartSerializer(recipe_data, context={'request': request}).data,
+                status=status.HTTP_201_CREATED
             )
+        serializer.delete()
+        return Response(
+            {'detail': 'Рецепт удалён из корзины.'},
+            status=status.HTTP_204_NO_CONTENT
+        )
 
     @action(detail=False, methods=['get'], url_path='download_shopping_cart')
     def download_shopping_cart(self, request):
@@ -89,26 +84,25 @@ class RecipeView(viewsets.ModelViewSet):
         """Добавляет или удаляет рецепт из избранного пользователя."""
         recipe = get_object_or_404(Recipe, pk=pk)
         user = request.user
-        favorite_serializer = FavoriteSerializer(
+        serializer = FavoriteSerializer(
             data={'recipe_id': recipe.id},
             context={'request': request}
         )
-        favorite_serializer.is_valid(raise_exception=True)
+        serializer.is_valid(raise_exception=True)
         if request.method == 'POST':
-            Favorite.objects.create(user=user, recipe=recipe)
-            serializer = RecipeBriefSerializer(
-                recipe,
-                context={'request': request})
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-
-        else:
-            favorite = Favorite.objects.filter(
-                user=user,
-                recipe=recipe
-            ).first()
-            favorite.delete()
-            return Response({'detail': 'Рецепт удалён из избранного.'},
-                            status=status.HTTP_204_NO_CONTENT)
+            recipe_data = serializer.save()
+            return Response(
+                FavoriteSerializer(
+                    recipe_data, context={'request': request}
+                ).data,
+                status=status.HTTP_201_CREATED
+            )
+        user.favorites.filter(
+            recipe__id=serializer.validated_data['recipe_id'].id).delete()
+        return Response(
+            {'detail': 'Рецепт удалён из избранного.'},
+            status=status.HTTP_204_NO_CONTENT
+        )
 
     @action(detail=True, methods=['get'], url_path='get-link')
     def recipe_by_link(self, request, pk=None):
