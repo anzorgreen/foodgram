@@ -108,9 +108,7 @@ class RecipeView(viewsets.ModelViewSet):
     def recipe_by_link(self, request, pk=None):
         """Создать короткую ссылку на рецепт."""
         short_link = get_object_or_404(Recipe, id=pk).generate_short_url()
-        return Response(
-            {'short-link': short_link}
-        )
+        return Response({'short-link': short_link})
 
 
 @api_view(['GET'])
