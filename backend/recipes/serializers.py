@@ -106,9 +106,11 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         """Создание рецепта с ингредиентами и тегами."""
+        tags = validated_data.pop('tags')
+        ingredients = validated_data.pop('ingredients')
         recipe = Recipe.objects.create(**validated_data)
-        recipe.tags.set(validated_data.pop('tags'))
-        self._handle_ingredients(recipe, validated_data.pop('ingredients'))
+        recipe.tags.set(tags)
+        self._handle_ingredients(recipe, ingredients)
         return recipe
 
     def update(self, instance, validated_data):
@@ -215,7 +217,10 @@ class RecipeReadSerializer(serializers.ModelSerializer):
         request = self.context.get('request')
         if not request.user.is_authenticated:
             return False
-        return request.user.cart.filter(recipes=obj).exists()
+        return Cart.objects.filter(
+            user=request.user,
+            recipes=obj
+        ).exists()
 
     class Meta:
         model = Recipe
