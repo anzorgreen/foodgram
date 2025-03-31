@@ -9,8 +9,8 @@ from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 
-from backend.pagination import CustomPageNumberPagination
-from backend.permissions import IsOwnerOrReadOnly, StrictAuthenticated
+from core.pagination import CustomPageNumberPagination
+from core.permissions import IsOwnerOrReadOnly, StrictAuthenticated
 from .models import User
 from .serializers import (ChangePasswordSerializer, SubscriptionSerializer,
                           UserCreateSerializer, UserListSerializer,

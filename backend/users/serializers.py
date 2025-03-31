@@ -207,10 +207,8 @@ class SubscriptionSerializer(serializers.Serializer):
 
     def create(self, validated_data):
         """Создаем подписку."""
-        return Subscription.objects.create(
-            subscriber=self.context['request'].user,
-            subscribed_to=validated_data['subscribed_to']
-        )
+        return self.context['request'].user.subscriptions.create(
+            subscribed_to=validated_data['subscribed_to'])
 
     def delete(self):
         """Удаляем подписку."""
@@ -219,7 +217,10 @@ class SubscriptionSerializer(serializers.Serializer):
         ).delete()
 
     def to_representation(self, instance):
+        recipes_limit = self.context.get('request').query_params.get(
+            'recipes_limit'
+        )
         return UserWithRecipesSerializer(
             instance.subscribed_to,
-            context=self.context
+            context={**self.context, 'recipes_limit': recipes_limit}
         ).data

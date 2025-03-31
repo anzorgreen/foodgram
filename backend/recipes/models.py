@@ -7,13 +7,13 @@ from django.db import models
 from django.db.models.signals import post_delete
 from django.dispatch import receiver
 
-from backend.base_model import BaseModel
+from core.models import TimeStampModel
 from backend.settings import (MAX_LENGTH_NAME, MAX_LENGTH_SHORT_DESCRIPTION,
                               MAX_LENGTH_SLUG, MIN_COOKING_TIME,
                               MIN_IMAGE_SIZE_MB, MIN_INGREDIENT_AMOUNT)
 
 
-class Recipe(BaseModel):
+class Recipe(TimeStampModel):
     """Модель рецепта."""
 
     name = models.CharField(
@@ -109,7 +109,7 @@ def delete_recipe_image(sender, instance, **kwargs):
             os.remove(instance.image.path)
 
 
-class Tag(BaseModel):
+class Tag(TimeStampModel):
     """Модель тега для категоризации рецептов."""
 
     name = models.CharField(
@@ -136,7 +136,7 @@ class Tag(BaseModel):
         return f'{self.name}/{self.slug}'
 
 
-class Ingredient(BaseModel):
+class Ingredient(TimeStampModel):
     """Модель ингредиента с названием и единицей измерения."""
 
     name = models.CharField(
@@ -236,7 +236,7 @@ class Cart(models.Model):
                 f' ({self.user.username})')
 
 
-class Favorite(BaseModel):
+class Favorite(TimeStampModel):
     """Модель избранных рецептов."""
 
     recipe = models.ForeignKey(

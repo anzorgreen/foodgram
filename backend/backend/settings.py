@@ -19,11 +19,13 @@ MAX_LENGTH_SHORT_DESCRIPTION = 25
 MIN_COOKING_TIME = 1
 MIN_INGREDIENT_AMOUNT = 1
 MIN_IMAGE_SIZE_MB = 5
+PAGE_SIZE = 10
 # Application definition
 
 INSTALLED_APPS = [
     'users.apps.UsersConfig',
     'recipes.apps.RecipesConfig',
+    'core.apps.CoreConfig',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',

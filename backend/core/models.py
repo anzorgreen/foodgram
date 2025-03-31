@@ -1,7 +1,7 @@
 from django.db import models
 
 
-class BaseModel(models.Model):
+class TimeStampModel(models.Model):
     """Абстрактная модель с полями времени создания и обновления."""
 
     created_at = models.DateTimeField(

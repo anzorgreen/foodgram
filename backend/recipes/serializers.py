@@ -150,32 +150,6 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
                 )
         return value
 
-    def validate_ingredients(self, value):
-        ingredients = []
-        if not value:
-            raise serializers.ValidationError(
-                'Необходимо указать ингредиенты'
-            )
-        for ingredient in value:
-            if ingredient['id'] in ingredients:
-                raise serializers.ValidationError(
-                    'Не стоит указывать один ингредиент дважды'
-                )
-            ingredients.append(ingredient['id'])
-        return value
-
-    def validate_tags(self, value):
-        if not value:
-            raise serializers.ValidationError(
-                'Необходимо указать хотя бы один тег'
-            )
-        tag_ids = [tag.id for tag in value]
-        if len(tag_ids) != len(set(tag_ids)):
-            raise serializers.ValidationError(
-                'Не стоит указывать один тег дважды'
-            )
-        return value
-
     def validate_cooking_time(self, value):
         if value < MIN_COOKING_TIME:
             raise serializers.ValidationError(
@@ -184,14 +158,30 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
         return value
 
     def validate(self, attrs):
-        if 'tags' not in attrs:
+        """Валидация полей `tags` и `ingredients`."""
+        if 'tags' not in attrs or not attrs['tags']:
             raise serializers.ValidationError(
-                'Необходимо указать хотя бы один тег'
+                {'tags': 'Необходимо указать хотя бы один тег.'}
             )
-        if 'ingredients' not in attrs:
+        if 'ingredients' not in attrs or not attrs['ingredients']:
             raise serializers.ValidationError(
-                'Необходимо указать хотя бы один ингредиент'
+                {'ingredients': 'Необходимо указать хотя бы один ингредиент.'}
             )
+        tag_ids = [tag.id for tag in attrs['tags']]
+        if len(tag_ids) != len(set(tag_ids)):
+            raise serializers.ValidationError(
+                {'tags': 'Не стоит указывать один тег дважды.'}
+            )
+        ingredient_ids = set()
+        for ingredient in attrs['ingredients']:
+            if ingredient['id'] in ingredient_ids:
+                raise serializers.ValidationError(
+                    {
+                        'ingredients':
+                        'Не стоит указывать один ингредиент дважды.'
+                    }
+                )
+            ingredient_ids.add(ingredient['id'])
         return attrs
 
 
@@ -217,10 +207,9 @@ class RecipeReadSerializer(serializers.ModelSerializer):
         request = self.context.get('request')
         if not request.user.is_authenticated:
             return False
-        return Cart.objects.filter(
-            user=request.user,
-            recipes=obj
-        ).exists()
+        if hasattr(request.user, 'cart'):
+            return request.user.cart.recipes.filter(pk=obj.pk).exists()
+        return False
 
     class Meta:
         model = Recipe
@@ -252,7 +241,6 @@ class CartSerializer(serializers.ModelSerializer):
     def validate_recipe_id(self, value):
         """Проверяет, что рецепт с указанным ID существует."""
         request = self.context.get('request')
-        recipe = get_object_or_404(Recipe, pk=value)
         try:
             cart = request.user.cart
         except Cart.DoesNotExist:
@@ -267,24 +255,14 @@ class CartSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError(
                     'Рецепт не найден в корзине.'
                 )
-        return recipe
+        return value
 
     def create(self, validated_data):
-        """Создаёт корзину, если её нет, и добавляет рецепт."""
+        """Создаёт корзину, если её нет."""
         user = self.context['request'].user
-        recipe = validated_data['recipe_id']
-        cart, _ = Cart.objects.get_or_create(user=user)
-        cart.recipes.add(recipe)
+        recipe = get_object_or_404(Recipe, pk=validated_data['recipe_id'])
+        Cart.objects.get_or_create(user=user)
         return recipe
-
-    def delete(self):
-        """Удаляет рецепт из корзины."""
-        user = self.context['request'].user
-        recipe = self.validated_data['recipe_id']
-        cart = Cart.objects.filter(user=user).first()
-        if cart:
-            cart.recipes.remove(recipe)
-        return cart
 
     def to_representation(self, instance):
         """Возвращает краткую информацию о рецепте."""
@@ -302,30 +280,19 @@ class FavoriteSerializer(serializers.ModelSerializer):
 
     def validate_recipe_id(self, value):
         request = self.context.get('request')
-        user = request.user
-        recipe = get_object_or_404(Recipe, id=value)
-        if request.method == 'POST' and user.favorites.filter(
-            recipe=recipe
+        if request.method == 'POST' and request.user.favorites.filter(
+            recipe_id=value
         ).exists():
             raise serializers.ValidationError(
                 'Рецепт уже добавлен в избранное.'
             )
-
-        if request.method == 'DELETE' and not user.favorites.filter(
-            recipe=recipe
+        if request.method == 'DELETE' and not request.user.favorites.filter(
+            recipe_id=value
         ).exists():
             raise serializers.ValidationError(
                 'Рецепт не найден в избранном.'
             )
-        return recipe
-
-    def create(self, validated_data):
-        """Добавляет рецепт в избранное"""
-        recipe = validated_data['recipe_id']
-        Favorite.objects.create(
-            user=self.context['request'].user,
-            recipe=recipe)
-        return recipe
+        return value
 
     def to_representation(self, instance):
         """Возвращает краткую информацию о рецепте."""

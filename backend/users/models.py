@@ -2,7 +2,7 @@ from django.contrib.auth.models import AbstractUser
 from django.core.exceptions import ValidationError
 from django.db import models
 
-from backend.base_model import BaseModel
+from core.models import TimeStampModel
 from backend.settings import MAX_LENTHG_SHORT_NAME
 
 
@@ -51,7 +51,7 @@ class User(AbstractUser):
         return f'{self.first_name} {self.last_name}'
 
 
-class Subscription(BaseModel):
+class Subscription(TimeStampModel):
     """Модель подписки."""
 
     subscriber = models.ForeignKey(

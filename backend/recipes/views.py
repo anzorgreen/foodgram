@@ -8,8 +8,8 @@ from rest_framework.decorators import action, api_view
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 
-from backend.pagination import CustomPageNumberPagination
-from backend.permissions import IsOwnerOrReadOnly, StrictAuthenticated
+from core.pagination import CustomPageNumberPagination
+from core.permissions import IsOwnerOrReadOnly, StrictAuthenticated
 from .filters import IngredientFilter, RecipeFilter
 from .models import Ingredient, Recipe, Tag
 from .serializers import (CartSerializer, FavoriteSerializer,
@@ -45,16 +45,20 @@ class RecipeView(viewsets.ModelViewSet):
     @action(detail=True, methods=['post', 'delete'], url_path='shopping_cart')
     def manage_cart(self, request, pk=None):
         """Добавить или удалить рецепт из корзины пользователя."""
-        data = {'recipe_id': pk}
-        serializer = CartSerializer(data=data, context={'request': request})
+        recipe = get_object_or_404(Recipe, pk=pk)
+        serializer = CartSerializer(
+            data={'recipe_id': recipe.id},
+            context={'request': request}
+        )
         serializer.is_valid(raise_exception=True)
         if request.method == 'POST':
-            recipe_data = serializer.save()
+            serializer.save()
+            request.user.cart.recipes.add(recipe)
             return Response(
-                CartSerializer(recipe_data, context={'request': request}).data,
+                serializer.data,
                 status=status.HTTP_201_CREATED
             )
-        serializer.delete()
+        request.user.cart.recipes.remove(recipe)
         return Response(
             {'detail': 'Рецепт удалён из корзины.'},
             status=status.HTTP_204_NO_CONTENT
@@ -83,22 +87,18 @@ class RecipeView(viewsets.ModelViewSet):
     def favorite(self, request, pk=None):
         """Добавляет или удаляет рецепт из избранного пользователя."""
         recipe = get_object_or_404(Recipe, pk=pk)
-        user = request.user
         serializer = FavoriteSerializer(
             data={'recipe_id': recipe.id},
             context={'request': request}
         )
         serializer.is_valid(raise_exception=True)
         if request.method == 'POST':
-            recipe_data = serializer.save()
+            request.user.favorites.create(recipe=recipe)
             return Response(
-                FavoriteSerializer(
-                    recipe_data, context={'request': request}
-                ).data,
+                serializer.to_representation(recipe),
                 status=status.HTTP_201_CREATED
             )
-        user.favorites.filter(
-            recipe__id=serializer.validated_data['recipe_id'].id).delete()
+        request.user.favorites.filter(recipe=recipe).delete()
         return Response(
             {'detail': 'Рецепт удалён из избранного.'},
             status=status.HTTP_204_NO_CONTENT
