@@ -20,7 +20,7 @@ sudo apt install docker-compose-plugin
 Или скачайте Docker Desktop с официального сайта Docker https://www.docker.com/products/docker-desktop и следуйте инструкциям по установке.
 
 ## Развёртывание на удалённом сервере
-Перенесите файл docker-compose.production.yml на сервер в директорию ~/foodgram/infra любым удобным способом 
+Перенесите файл docker-compose.production.yml на сервер в директорию ~/foodgram/infra любым удобным способом.
 Туда же перенесите файл nginx.config.
 В директорию ~/foodgram перенесите файл .env.
 Перейдите в директорую infra.
