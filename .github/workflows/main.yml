@@ -82,7 +82,7 @@ jobs:
           passphrase: ${{ secrets.SSH_PASSPHRASE }}
           source: "./docs"
           target: "~/foodgram"
-      - name: Copy docker-compose.production.yml via ssh
+      - name: Copy infra via ssh
         uses: appleboy/scp-action@master
         with:
           timeout: 60s
@@ -91,7 +91,7 @@ jobs:
           username: ${{ secrets.USER }}
           key: ${{ secrets.SSH_KEY }}
           passphrase: ${{ secrets.SSH_PASSPHRASE }}
-          source: "infra/docker-compose.production.yml"
+          source: "./infra"
           target: "~/foodgram"
       - name: Executing remote ssh commands to deploy
         uses: appleboy/ssh-action@master
