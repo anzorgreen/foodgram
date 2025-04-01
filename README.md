@@ -20,7 +20,11 @@ sudo apt install docker-compose-plugin
 Или скачайте Docker Desktop с официального сайта Docker https://www.docker.com/products/docker-desktop и следуйте инструкциям по установке.
 
 ## Развёртывание на удалённом сервере
-Перенесите файл docker-compose.production.yml на сервер любым удобным способом.
+Перенесите файл docker-compose.production.yml на сервер в директорию ~/foodgram/infra любым удобным способом 
+Туда же перенесите файл nginx.config.
+В директорию ~/foodgram перенесите файл .env.
+Перейдите в директорую infra.
+
 Затем скачайте и запустите образы Docker командой:
 ```
 sudo docker compose -f docker-compose.production.yml up -d
@@ -30,7 +34,19 @@ sudo docker compose -f docker-compose.production.yml up -d
 sudo docker compose -f docker-compose.production.yml exec backend python manage.py migrate
 sudo docker compose -f docker-compose.production.yml exec backend python manage.py collectstatic
 sudo docker compose -f docker-compose.production.yml exec backend cp -r /app/collected_static/. /backend_static/static/
+
 ```
+Создайте суперпользователя командой:
+```
+sudo docker compose -f docker-compose.production.yml exec backend python manage.py createsuperuser
+```
+
+В частности вы можете загрузить набор ингредиентов и тегов из scv файлов. Для этого запустите команды:
+```
+sudo docker compose -f docker-compose.production.yml exec backend python manage.py load_ingredients
+sudo docker compose -f docker-compose.production.yml exec backend python manage.py load_tags
+```
+
 Проект будет доступен по IP-адресу вашего сервера.
 
 ## Локальная разработка
@@ -49,6 +65,8 @@ docker compose exec backend python manage.py collectstatic
 docker compose exec backend cp -r /app/collected_static/. /backend_static/static/
 Проект будет доступен локально по адресу http://localhost:9000/.
 ```
+
+Вы также можете создать суперпользователя и загрузить тестовые ингредиенты и теги используя команды выше.
 
 ## Использованные технологии
 Django
