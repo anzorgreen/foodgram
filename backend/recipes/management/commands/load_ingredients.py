@@ -7,7 +7,7 @@ from recipes.models import Ingredient
 
 
 class Command(BaseCommand):
-    """Комманад для загрузки ингредиентов"""
+    """Команда для загрузки ингредиентов."""
     help = 'Load ingredients from CSV file into database'
 
     def handle(self, *args, **options):

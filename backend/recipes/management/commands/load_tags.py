@@ -4,6 +4,7 @@ from recipes.models import Tag
 
 
 class Command(BaseCommand):
+    """Команда для загрузки тегов."""
 
     help = 'Load tags from CSV'
 
